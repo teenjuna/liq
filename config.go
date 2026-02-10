@@ -4,11 +4,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/teenjuna/liq/buffer"
 	"github.com/teenjuna/liq/codec/json"
 	"github.com/teenjuna/liq/internal"
 	"github.com/teenjuna/liq/retry"
 )
+
+// TODO: aliases for buffer, codec etc
 
 type Option[Item any] = func(*config[Item])
 
@@ -88,6 +91,15 @@ func WithRetryPolicy[Item any](policy internal.RetryPolicy) Option[Item] {
 	}
 }
 
+func WithPrometheus[Item any](
+	registerer prometheus.Registerer,
+	namespace, subsystem string,
+) Option[Item] {
+	return func(c *config[Item]) {
+		c.metrics = newMetrics(registerer, namespace, subsystem)
+	}
+}
+
 type config[Item any] struct {
 	file         string
 	codec        internal.Codec[Item]
@@ -97,6 +109,7 @@ type config[Item any] struct {
 	flushTimeout time.Duration
 	workers      int
 	batches      int
+	metrics      *metrics
 }
 
 func newConfig[Item any](options ...Option[Item]) *config[Item] {
@@ -107,6 +120,7 @@ func newConfig[Item any](options ...Option[Item]) *config[Item] {
 		WithRetryPolicy[Item](retry.NewImmediate(0)),
 		WithBatches[Item](1),
 		WithWorkers[Item](1),
+		WithPrometheus[Item](nil, "namespace", "subsystem"),
 	}, options...)
 
 	cfg := config[Item]{}

@@ -23,8 +23,6 @@ type Queue[Item any] struct {
 	storage *sqlite.Storage
 
 	closing *atomic.Bool
-	batches *atomic.Int64
-	items   *atomic.Int64
 
 	push      chan Item
 	flush     chan chan flushResult
@@ -61,10 +59,7 @@ func New[Item any](
 	}
 
 	var (
-		closing = new(atomic.Bool)
-		batches = new(atomic.Int64)
-		items   = new(atomic.Int64)
-
+		closing   = new(atomic.Bool)
 		push      = make(chan Item, cfg.flushSize)
 		flush     = make(chan chan flushResult)
 		flushed   = make(chan struct{}, cfg.workers)
@@ -84,17 +79,14 @@ func New[Item any](
 		return nil, fmt.Errorf("get stats from sqlite: %w", err)
 	}
 
-	batches.Store(int64(stats.Batches))
-	items.Store(int64(stats.Items))
+	cfg.metrics.batches.Set(float64(stats.Batches))
+	cfg.metrics.items.Add(float64(stats.Items))
 
 	queue := Queue[Item]{
 		cfg:     cfg,
 		storage: storage,
 
-		closing: closing,
-		batches: batches,
-		items:   items,
-
+		closing:   closing,
 		push:      push,
 		flush:     flush,
 		flushed:   flushed,
@@ -125,6 +117,7 @@ func (q *Queue[Item]) Push(ctx context.Context, item Item) error {
 
 	select {
 	case q.push <- item:
+		q.cfg.metrics.pushes.Inc()
 		return nil
 	case <-ctx.Done():
 		return ctx.Err()
@@ -210,15 +203,12 @@ func (q *Queue[Item]) workers() {
 
 func (q *Queue[Item]) pushWorker() error {
 	var (
-		buffer = q.cfg.buffer.Derive()
-		codec  = q.cfg.codec.Derive()
-		tick   = ticker(q.cfg.flushTimeout)
+		buffer  = q.cfg.buffer.Derive()
+		codec   = q.cfg.codec.Derive()
+		timeout = ticker(q.cfg.flushTimeout)
 	)
 	for {
-		var (
-			flush   bool
-			flushCh chan flushResult
-		)
+		var flushCh chan flushResult
 		select {
 		case <-q.pushCtx.Done():
 		loop:
@@ -233,25 +223,30 @@ func (q *Queue[Item]) pushWorker() error {
 					break loop
 				}
 			}
-			if buffer.Size() != 0 {
-				flush = true
-				break
+			if buffer.Size() == 0 {
+				return nil
 			}
-			return nil
+			q.cfg.metrics.flushes.WithLabelValues("context").Inc()
+
 		case flushCh = <-q.flush:
-			flush = buffer.Size() != 0
-			if !flush {
+			if buffer.Size() == 0 {
 				notify(flushCh, flushResult{})
+				continue
 			}
-		case <-tick:
-			flush = buffer.Size() != 0
+			q.cfg.metrics.flushes.WithLabelValues("manual").Inc()
+
+		case <-timeout:
+			if buffer.Size() == 0 {
+				continue
+			}
+			q.cfg.metrics.flushes.WithLabelValues("timeout").Inc()
+
 		case item := <-q.push:
 			buffer.Push(item)
-			flush = buffer.Size() >= q.cfg.flushSize
-		}
-
-		if !flush {
-			continue
+			if buffer.Size() < q.cfg.flushSize {
+				continue
+			}
+			q.cfg.metrics.flushes.WithLabelValues("size").Inc()
 		}
 
 		data, err := codec.Encode(buffer)
@@ -268,8 +263,9 @@ func (q *Queue[Item]) pushWorker() error {
 			return err
 		}
 
-		q.batches.Add(1)
-		q.items.Add(int64(buffer.Size()))
+		q.cfg.metrics.batches.Add(1)
+		q.cfg.metrics.items.Add(float64(buffer.Size()))
+
 		notify(flushCh, flushResult{id: id})
 		notify(q.flushed, struct{}{})
 
@@ -279,10 +275,10 @@ func (q *Queue[Item]) pushWorker() error {
 
 func (q *Queue[Item]) processWorker() error {
 	var (
-		buffer = q.cfg.buffer.Derive()
-		codec  = q.cfg.codec.Derive()
-		tick   = timer(0)
-		wait   = false
+		buffer   = q.cfg.buffer.Derive()
+		codec    = q.cfg.codec.Derive()
+		cooldown = timer(0)
+		wait     = false
 	)
 
 	for {
@@ -291,7 +287,7 @@ func (q *Queue[Item]) processWorker() error {
 			case <-q.processCtx.Done():
 				return nil
 			case <-q.flushed:
-			case <-tick:
+			case <-cooldown:
 			}
 		}
 
@@ -309,7 +305,7 @@ func (q *Queue[Item]) processWorker() error {
 				return fmt.Errorf("get stats: %w", err)
 			}
 
-			tick = timer(time.Until(stat.NextCooldownEnd))
+			cooldown = timer(time.Until(stat.NextCooldownEnd))
 			wait = true
 			continue
 		}
@@ -332,10 +328,13 @@ func (q *Queue[Item]) processWorker() error {
 			if !retry.Attempt(ctx) {
 				break
 			}
+			t := time.Now()
 			if processErr = q.processFunc(ctx, q, buffer.Iter()); processErr == nil {
+				q.cfg.metrics.processDuration.Observe(float64(time.Since(t).Milliseconds()))
 				ok = true
 				break
 			}
+			q.cfg.metrics.processErrors.Add(1)
 		}
 
 		batchIDs := make([]sqlite.BatchID, len(batches))
@@ -355,8 +354,8 @@ func (q *Queue[Item]) processWorker() error {
 				notifyAll(err)
 				return err
 			}
-			q.batches.Add(-int64(len(batches)))
-			q.items.Add(-int64(items))
+			q.cfg.metrics.batches.Sub(float64(len(batches)))
+			q.cfg.metrics.items.Sub(float64(items))
 			notifyAll(nil)
 		} else {
 			if err := q.storage.Release(batchIDs...); err != nil {
