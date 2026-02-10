@@ -6,6 +6,7 @@ import (
 
 	"github.com/teenjuna/liq/buffer"
 	"github.com/teenjuna/liq/codec/json"
+	"github.com/teenjuna/liq/internal"
 	"github.com/teenjuna/liq/retry"
 )
 
@@ -60,7 +61,7 @@ func WithBatches[Item any](batches int) Option[Item] {
 	}
 }
 
-func WithCodec[Item any](codec Codec[Item]) Option[Item] {
+func WithCodec[Item any](codec internal.Codec[Item]) Option[Item] {
 	if codec == nil {
 		panic("codec can't be nil")
 	}
@@ -69,7 +70,7 @@ func WithCodec[Item any](codec Codec[Item]) Option[Item] {
 	}
 }
 
-func WithBuffer[Item any](buffer Buffer[Item]) Option[Item] {
+func WithBuffer[Item any](buffer internal.Buffer[Item]) Option[Item] {
 	if buffer == nil {
 		panic("buffer can't be nil")
 	}
@@ -78,7 +79,7 @@ func WithBuffer[Item any](buffer Buffer[Item]) Option[Item] {
 	}
 }
 
-func WithRetryPolicy[Item any](policy RetryPolicy) Option[Item] {
+func WithRetryPolicy[Item any](policy internal.RetryPolicy) Option[Item] {
 	if policy == nil {
 		panic("policy can't be nil")
 	}
@@ -89,9 +90,9 @@ func WithRetryPolicy[Item any](policy RetryPolicy) Option[Item] {
 
 type config[Item any] struct {
 	file         string
-	codec        Codec[Item]
-	buffer       Buffer[Item]
-	retryPolicy  RetryPolicy
+	codec        internal.Codec[Item]
+	buffer       internal.Buffer[Item]
+	retryPolicy  internal.RetryPolicy
 	flushSize    int
 	flushTimeout time.Duration
 	workers      int

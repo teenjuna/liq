@@ -1,6 +1,4 @@
-// TODO: package liq -> liq_test
-
-package liq
+package liq_test
 
 import (
 	"context"
@@ -14,6 +12,7 @@ import (
 	"testing/synctest"
 	"time"
 
+	"github.com/teenjuna/liq"
 	"github.com/teenjuna/liq/internal/testing/require"
 	"github.com/teenjuna/liq/retry"
 )
@@ -40,14 +39,14 @@ func TestQueueFlushBySize(t *testing.T) {
 	run(t, func(t *testing.T) {
 		processed := make(chan struct{})
 
-		queue, err := New(
-			func(ctx context.Context, queue *Queue[Item], batch iter.Seq[Item]) error {
+		queue, err := liq.New(
+			func(ctx context.Context, queue *liq.Queue[Item], batch iter.Seq[Item]) error {
 				items := slices.Collect(batch)
 				require.Equal(t, items, Data)
 				processed <- struct{}{}
 				return nil
 			},
-			WithFlushSize[Item](len(Data)),
+			liq.WithFlushSize[Item](len(Data)),
 		)
 		require.Nil(t, err)
 		deferClose(t, queue)
@@ -66,15 +65,15 @@ func TestQueueFlushByTimeout(t *testing.T) {
 		const timeout = time.Hour
 		processed := make(chan struct{})
 
-		queue, err := New(
-			func(ctx context.Context, queue *Queue[Item], batch iter.Seq[Item]) error {
+		queue, err := liq.New(
+			func(ctx context.Context, queue *liq.Queue[Item], batch iter.Seq[Item]) error {
 				items := slices.Collect(batch)
 				require.Equal(t, items, Data)
 				processed <- struct{}{}
 				return nil
 			},
-			WithFlushSize[Item](len(Data)*2),
-			WithFlushTimeout[Item](timeout),
+			liq.WithFlushSize[Item](len(Data)*2),
+			liq.WithFlushTimeout[Item](timeout),
 		)
 		require.Nil(t, err)
 		deferClose(t, queue)
@@ -105,15 +104,15 @@ func TestQueueManualFlush(t *testing.T) {
 		// the blocked queue.Flush(), the test deadlocks.
 		processed := make(chan struct{}, 1)
 
-		queue, err := New(
-			func(ctx context.Context, queue *Queue[Item], batch iter.Seq[Item]) error {
+		queue, err := liq.New(
+			func(ctx context.Context, queue *liq.Queue[Item], batch iter.Seq[Item]) error {
 				items := slices.Collect(batch)
 				require.Equal(t, items, Data)
 				processed <- struct{}{}
 				return nil
 			},
-			WithFlushSize[Item](len(Data)*2),
-			WithFlushTimeout[Item](time.Hour),
+			liq.WithFlushSize[Item](len(Data)*2),
+			liq.WithFlushTimeout[Item](time.Hour),
 		)
 		require.Nil(t, err)
 		deferClose(t, queue)
@@ -143,12 +142,12 @@ func TestPushOnClose(t *testing.T) {
 			process = make(chan struct{})
 			file    = tempFile(t)
 		)
-		queue, err := New(
-			func(ctx context.Context, queue *Queue[Item], batch iter.Seq[Item]) error {
+		queue, err := liq.New(
+			func(ctx context.Context, queue *liq.Queue[Item], batch iter.Seq[Item]) error {
 				<-process
 
 				// Ensure queue is closed.
-				require.Equal(t, queue.Close(), ErrClosed)
+				require.Equal(t, queue.Close(), liq.ErrClosed)
 
 				// Push half of the batch back to queue.
 				items := slices.Collect(batch)
@@ -158,8 +157,8 @@ func TestPushOnClose(t *testing.T) {
 
 				return nil
 			},
-			WithFile[Item](file),
-			WithFlushSize[Item](len(Data)),
+			liq.WithFile[Item](file),
+			liq.WithFlushSize[Item](len(Data)),
 		)
 		require.Nil(t, err)
 
@@ -186,19 +185,19 @@ func TestPushOnClose(t *testing.T) {
 		synctest.Wait()
 
 		// Ensure we can't push into closed queue.
-		require.Equal(t, queue.Push(t.Context(), Item{}), ErrClosed)
+		require.Equal(t, queue.Push(t.Context(), Item{}), liq.ErrClosed)
 
 		// Reopen the queue and make sure processFunc receives saved half of the batch.
 		processed := make(chan struct{})
-		queue, err = New(
-			func(ctx context.Context, queue *Queue[Item], batch iter.Seq[Item]) error {
+		queue, err = liq.New(
+			func(ctx context.Context, queue *liq.Queue[Item], batch iter.Seq[Item]) error {
 				items := slices.Collect(batch)
 				require.Equal(t, len(items), len(Data)/2)
 				require.Equal(t, items, Data[:len(Data)/2])
 				processed <- struct{}{}
 				return nil
 			},
-			WithFile[Item](file),
+			liq.WithFile[Item](file),
 		)
 		require.Nil(t, err)
 		deferClose(t, queue)
@@ -214,13 +213,13 @@ func TestDataPersistenceBetweenRestarts(t *testing.T) {
 			file        = tempFile(t)
 			ctx, cancel = context.WithCancel(t.Context())
 		)
-		queue, err := New(
-			func(_ context.Context, queue *Queue[Item], batch iter.Seq[Item]) error {
+		queue, err := liq.New(
+			func(_ context.Context, queue *liq.Queue[Item], batch iter.Seq[Item]) error {
 				<-ctx.Done()
 				return ctx.Err()
 			},
-			WithFile[Item](file),
-			WithFlushSize[Item](len(Data)/2+1),
+			liq.WithFile[Item](file),
+			liq.WithFlushSize[Item](len(Data)/2+1),
 		)
 		require.Nil(t, err)
 
@@ -241,16 +240,16 @@ func TestDataPersistenceBetweenRestarts(t *testing.T) {
 
 		// Reopen the queue and make sure that both batches were persisted.
 		processed := make(chan struct{})
-		queue, err = New(
-			func(ctx context.Context, queue *Queue[Item], batch iter.Seq[Item]) error {
+		queue, err = liq.New(
+			func(ctx context.Context, queue *liq.Queue[Item], batch iter.Seq[Item]) error {
 				items := slices.Collect(batch)
 				require.Equal(t, len(items), len(Data))
 				require.Equal(t, items, Data)
 				processed <- struct{}{}
 				return nil
 			},
-			WithFile[Item](file),
-			WithBatches[Item](2),
+			liq.WithFile[Item](file),
+			liq.WithBatches[Item](2),
 		)
 		require.Nil(t, err)
 		deferClose(t, queue)
@@ -271,13 +270,13 @@ func TestMultipleBatches(t *testing.T) {
 		// First, we create a mock queue that won't process any items. This will allow us to push
 		// all batches before they can be processed.
 		file := tempFile(t)
-		queue, err := New(
-			func(ctx context.Context, queue *Queue[Item], batch iter.Seq[Item]) error {
+		queue, err := liq.New(
+			func(ctx context.Context, queue *liq.Queue[Item], batch iter.Seq[Item]) error {
 				<-ctx.Done()
 				return ctx.Err()
 			},
-			WithFile[Item](file),
-			WithFlushSize[Item](batchSize),
+			liq.WithFile[Item](file),
+			liq.WithFlushSize[Item](batchSize),
 		)
 		require.Nil(t, err)
 
@@ -295,8 +294,8 @@ func TestMultipleBatches(t *testing.T) {
 			processed      = make(chan struct{})
 			processedItems = make(map[string]struct{}, len(Data))
 		)
-		queue, err = New(
-			func(ctx context.Context, queue *Queue[Item], batch iter.Seq[Item]) error {
+		queue, err = liq.New(
+			func(ctx context.Context, queue *liq.Queue[Item], batch iter.Seq[Item]) error {
 				var items int
 				for item := range batch {
 					items += 1
@@ -308,8 +307,8 @@ func TestMultipleBatches(t *testing.T) {
 				processed <- struct{}{}
 				return nil
 			},
-			WithFile[Item](file),
-			WithBatches[Item](batches),
+			liq.WithFile[Item](file),
+			liq.WithBatches[Item](batches),
 		)
 		require.Nil(t, err)
 		deferClose(t, queue)
@@ -334,13 +333,13 @@ func TestMultipleWorkers(t *testing.T) {
 		// First, we create a mock queue that won't process any items. This will allow us to push
 		// all batches before they can be processed.
 		file := tempFile(t)
-		queue, err := New(
-			func(ctx context.Context, queue *Queue[Item], batch iter.Seq[Item]) error {
+		queue, err := liq.New(
+			func(ctx context.Context, queue *liq.Queue[Item], batch iter.Seq[Item]) error {
 				<-ctx.Done()
 				return ctx.Err()
 			},
-			WithFile[Item](file),
-			WithFlushSize[Item](batchSize),
+			liq.WithFile[Item](file),
+			liq.WithFlushSize[Item](batchSize),
 		)
 		require.Nil(t, err)
 
@@ -354,14 +353,14 @@ func TestMultipleWorkers(t *testing.T) {
 		// than it would otherwise be.
 		started := time.Now()
 		processed := make(chan struct{}, workers)
-		queue, err = New(
-			func(ctx context.Context, queue *Queue[Item], batch iter.Seq[Item]) error {
+		queue, err = liq.New(
+			func(ctx context.Context, queue *liq.Queue[Item], batch iter.Seq[Item]) error {
 				<-time.After(processTime)
 				processed <- struct{}{}
 				return nil
 			},
-			WithFile[Item](file),
-			WithWorkers[Item](workers),
+			liq.WithFile[Item](file),
+			liq.WithWorkers[Item](workers),
 		)
 		require.Nil(t, err)
 		deferClose(t, queue)
@@ -387,13 +386,13 @@ func TestProcessRetries(t *testing.T) {
 	)
 	run(t, func(t *testing.T) {
 		processed := make(chan struct{}, workers)
-		queue, err := New(
-			func(ctx context.Context, queue *Queue[Item], batch iter.Seq[Item]) error {
+		queue, err := liq.New(
+			func(ctx context.Context, queue *liq.Queue[Item], batch iter.Seq[Item]) error {
 				processed <- struct{}{}
 				return errors.New("retry")
 			},
-			WithWorkers[Item](workers),
-			WithRetryPolicy[Item](retry.
+			liq.WithWorkers[Item](workers),
+			liq.WithRetryPolicy[Item](retry.
 				NewFixed(3, interval).
 				WithJitter(0).
 				WithCooldown(cooldown),
@@ -426,7 +425,7 @@ func run(t *testing.T, fn func(t *testing.T)) {
 	synctest.Test(t, fn)
 }
 
-func deferClose[Item any](t *testing.T, queue *Queue[Item]) {
+func deferClose[Item any](t *testing.T, queue *liq.Queue[Item]) {
 	t.Cleanup(func() {
 		if err := queue.Close(); err != nil {
 			t.Fatalf("close queue: %v", err)

@@ -35,15 +35,20 @@ type Queue[Item any] struct {
 	pushStop  func()
 	pushGroup *errgroup.Group
 
-	processCtx   context.Context
-	processStop  func()
-	processFunc  ProcessFunc[Item]
+	processCtx  context.Context
+	processStop func()
+	// https://github.com/golang/go/issues/77249
+	// processFunc  ProcessFunc[Item]
+	processFunc  func(ctx context.Context, queue *Queue[Item], batch iter.Seq[Item]) error
 	processGroup *errgroup.Group
 }
 
 type ProcessFunc[Item any] = func(ctx context.Context, queue *Queue[Item], batch iter.Seq[Item]) error
 
-func New[Item any](processFunc ProcessFunc[Item], options ...Option[Item]) (*Queue[Item], error) {
+func New[Item any](
+	processFunc ProcessFunc[Item],
+	options ...Option[Item],
+) (*Queue[Item], error) {
 	cfg := newConfig(options...)
 	storage, err := sqlite.New(
 		sqlite.WithFile(cfg.file),
