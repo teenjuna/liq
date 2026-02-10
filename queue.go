@@ -36,7 +36,7 @@ type Queue[Item any] struct {
 	processCtx  context.Context
 	processStop func()
 	// https://github.com/golang/go/issues/77249
-	// processFunc  ProcessFunc[Item]
+	// processFunc ProcessFunc[Item]
 	processFunc  func(ctx context.Context, queue *Queue[Item], batch iter.Seq[Item]) error
 	processGroup *errgroup.Group
 }
