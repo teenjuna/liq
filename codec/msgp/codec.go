@@ -1,60 +1,47 @@
 package msgp
 
 import (
-	"bytes"
-	"errors"
-	"io"
-
 	"github.com/tinylib/msgp/msgp"
 
 	"github.com/teenjuna/liq/internal"
 )
 
-type msgpable[Item any] interface {
-	*Item
-	msgp.Encodable
-	msgp.Decodable
-}
-
 type Codec[Item any, ItemPtr msgpable[Item]] struct {
-	buf *bytes.Buffer
+	buf []byte
 }
 
 var _ internal.Codec[msgp.Raw] = (*Codec[msgp.Raw, *msgp.Raw])(nil)
 
 func New[Item any, ItemPtr msgpable[Item]]() *Codec[Item, ItemPtr] {
+	buf := make([]byte, 0)
 	return &Codec[Item, ItemPtr]{
-		buf: new(bytes.Buffer),
+		buf: buf,
 	}
 }
 
 func (c *Codec[Item, ItemPtr]) Encode(buffer internal.Buffer[Item]) ([]byte, error) {
-	c.buf.Reset()
-	writer := msgp.NewWriter(c.buf)
-
+	c.buf = c.buf[:0]
 	for item := range buffer.Iter() {
-		if err := ItemPtr(&item).EncodeMsg(writer); err != nil {
+		b, err := ItemPtr(&item).MarshalMsg(c.buf)
+		if err != nil {
 			return nil, err
 		}
+		c.buf = b
 	}
 
-	if err := writer.Flush(); err != nil {
-		return nil, err
-	}
-
-	return c.buf.Bytes(), nil
+	return c.buf, nil
 }
 
 func (c *Codec[Item, ItemPtr]) Decode(data []byte, buffer internal.Buffer[Item]) error {
-	reader := msgp.NewReader(bytes.NewReader(data))
-
 	for {
 		var item Item
-		if err := ItemPtr(&item).DecodeMsg(reader); errors.Is(err, io.EOF) {
+		d, err := ItemPtr(&item).UnmarshalMsg(data)
+		if err == msgp.ErrShortBytes {
 			break
 		} else if err != nil {
 			return err
 		}
+		data = d
 		buffer.Push(item)
 	}
 
@@ -63,4 +50,15 @@ func (c *Codec[Item, ItemPtr]) Decode(data []byte, buffer internal.Buffer[Item])
 
 func (c *Codec[Item, ItemPtr]) Derive() internal.Codec[Item] {
 	return New[Item, ItemPtr]()
+}
+
+type msgpable[Item any] interface {
+	*Item
+	msgp.Encodable
+	msgp.Decodable
+
+	// For the future:
+
+	msgp.Marshaler
+	msgp.Unmarshaler
 }

@@ -65,7 +65,7 @@ func New[Item any](
 		batches = new(atomic.Int64)
 		items   = new(atomic.Int64)
 
-		push      = make(chan Item)
+		push      = make(chan Item, cfg.flushSize)
 		flush     = make(chan chan flushResult)
 		flushed   = make(chan struct{}, cfg.workers)
 		processed = make(chan processResult)
@@ -221,6 +221,18 @@ func (q *Queue[Item]) pushWorker() error {
 		)
 		select {
 		case <-q.pushCtx.Done():
+		loop:
+			for {
+				select {
+				case item := <-q.push:
+					buffer.Push(item)
+					if buffer.Size() >= q.cfg.flushSize {
+						break loop
+					}
+				default:
+					break loop
+				}
+			}
 			if buffer.Size() != 0 {
 				flush = true
 				break
