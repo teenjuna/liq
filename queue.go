@@ -60,7 +60,7 @@ func New[Item any](
 
 	var (
 		closing   = new(atomic.Bool)
-		push      = make(chan Item, cfg.flushSize)
+		push      = make(chan Item)
 		flush     = make(chan chan flushResult)
 		flushed   = make(chan struct{}, cfg.workers)
 		processed = make(chan processResult)
@@ -126,7 +126,7 @@ func (q *Queue[Item]) Push(ctx context.Context, item Item) error {
 
 func (q *Queue[Item]) Flush(ctx context.Context) error {
 	resCh := make(chan flushResult)
-	notify(q.flush, resCh)
+	q.flush <- resCh
 
 	var fres flushResult
 	select {
@@ -211,18 +211,6 @@ func (q *Queue[Item]) pushWorker() error {
 		var flushCh chan flushResult
 		select {
 		case <-q.pushCtx.Done():
-		loop:
-			for {
-				select {
-				case item := <-q.push:
-					buffer.Push(item)
-					if buffer.Size() >= q.cfg.flushSize {
-						break loop
-					}
-				default:
-					break loop
-				}
-			}
 			if buffer.Size() == 0 {
 				return nil
 			}
