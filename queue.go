@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"iter"
 	"sync/atomic"
-	"testing"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -22,12 +21,10 @@ type Queue[Item any] struct {
 	cfg     *config[Item]
 	storage *sqlite.Storage
 
+	push    chan Item
+	flush   chan chan flushResult
+	flushed chan struct{}
 	closing *atomic.Bool
-
-	push      chan Item
-	flush     chan chan flushResult
-	flushed   chan struct{}
-	processed chan processResult
 
 	pushCtx   context.Context
 	pushStop  func()
@@ -59,11 +56,10 @@ func New[Item any](
 	}
 
 	var (
-		closing   = new(atomic.Bool)
-		push      = make(chan Item)
-		flush     = make(chan chan flushResult, 1)
-		flushed   = make(chan struct{}, cfg.workers)
-		processed = make(chan processResult, cfg.workers)
+		push    = make(chan Item)
+		flush   = make(chan chan flushResult)
+		flushed = make(chan struct{}, cfg.workers)
+		closing = new(atomic.Bool)
 
 		pushCtx_, pushStop = context.WithCancel(context.Background())
 		pushGroup, pushCtx = errgroup.WithContext(pushCtx_)
@@ -86,11 +82,10 @@ func New[Item any](
 		cfg:     cfg,
 		storage: storage,
 
-		closing:   closing,
-		push:      push,
-		flush:     flush,
-		flushed:   flushed,
-		processed: processed,
+		push:    push,
+		flush:   flush,
+		flushed: flushed,
+		closing: closing,
 
 		pushCtx:   pushCtx,
 		pushStop:  pushStop,
@@ -128,32 +123,12 @@ func (q *Queue[Item]) Flush(ctx context.Context) error {
 	resCh := make(chan flushResult, 1)
 	q.flush <- resCh
 
-	var fres flushResult
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
-	case fres = <-resCh:
+	case res := <-resCh:
+		return res.err
 	}
-
-	if fres.err != nil || fres.id == "" || !testing.Testing() {
-		return fres.err
-	}
-
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case pres := <-q.processed:
-			if pres.id != fres.id {
-				continue
-			}
-			if pres.err != nil {
-				return fmt.Errorf("process: %w", pres.err)
-			}
-			return nil
-		}
-	}
-
 }
 
 func (q *Queue[Item]) Close() error {
@@ -330,29 +305,19 @@ func (q *Queue[Item]) processWorker() error {
 			batchIDs[i] = batch.ID
 		}
 
-		notifyAll := func(err error) {
-			for _, id := range batchIDs {
-				notify(q.processed, processResult{id: id, err: err})
-			}
-		}
-
 		if ok {
 			if err := q.storage.Delete(batchIDs...); err != nil {
 				err = fmt.Errorf("delete batches: %w", err)
-				notifyAll(err)
 				return err
 			}
 			q.cfg.metrics.batches.Sub(float64(len(batches)))
 			q.cfg.metrics.items.Sub(float64(items))
-			notifyAll(nil)
 		} else {
 			if err := q.storage.Release(batchIDs...); err != nil {
 				err = fmt.Errorf("release batches: %w", err)
-				notifyAll(err)
 				return err
 			}
 			notify(q.flushed, struct{}{})
-			notifyAll(processErr)
 		}
 
 		buffer.Reset()

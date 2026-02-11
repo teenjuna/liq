@@ -131,6 +131,7 @@ func TestQueueManualFlush(t *testing.T) {
 		require.Nil(t, queue.Flush(t.Context()))
 
 		synctest.Wait()
+
 		expect(t, processed)
 	})
 }
