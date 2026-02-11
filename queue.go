@@ -61,9 +61,9 @@ func New[Item any](
 	var (
 		closing   = new(atomic.Bool)
 		push      = make(chan Item)
-		flush     = make(chan chan flushResult)
+		flush     = make(chan chan flushResult, 1)
 		flushed   = make(chan struct{}, cfg.workers)
-		processed = make(chan processResult)
+		processed = make(chan processResult, cfg.workers)
 
 		pushCtx_, pushStop = context.WithCancel(context.Background())
 		pushGroup, pushCtx = errgroup.WithContext(pushCtx_)
@@ -125,7 +125,7 @@ func (q *Queue[Item]) Push(ctx context.Context, item Item) error {
 }
 
 func (q *Queue[Item]) Flush(ctx context.Context) error {
-	resCh := make(chan flushResult)
+	resCh := make(chan flushResult, 1)
 	q.flush <- resCh
 
 	var fres flushResult
