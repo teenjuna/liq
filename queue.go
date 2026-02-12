@@ -58,7 +58,7 @@ func New[Item any](
 	}
 
 	var (
-		push    = make(chan Item)
+		push    = make(chan Item, cfg.flushSize)
 		flush   = make(chan chan flushResult)
 		flushed = make(chan struct{}, cfg.workers)
 		closing = new(atomic.Bool)
@@ -184,16 +184,28 @@ func (q *Queue[Item]) pushWorker() error {
 		codec   = q.cfg.codec.Derive()
 		timeout = ticker(q.cfg.flushTimeout)
 	)
+	collect := func() {
+		for buffer.Size() < q.cfg.flushSize {
+			select {
+			case item := <-q.push:
+				buffer.Push(item)
+			default:
+				return
+			}
+		}
+	}
 	for {
 		var flushCh chan flushResult
 		select {
 		case <-q.pushCtx.Done():
+			collect()
 			if buffer.Size() == 0 {
 				return nil
 			}
 			q.cfg.metrics.flushes.WithLabelValues("context").Inc()
 
 		case flushCh = <-q.flush:
+			collect()
 			if buffer.Size() == 0 {
 				notify(flushCh, flushResult{})
 				continue
