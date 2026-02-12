@@ -46,7 +46,9 @@ func TestQueueFlushBySize(t *testing.T) {
 				processed <- struct{}{}
 				return nil
 			},
-			liq.WithFlushSize[Item](len(Data)),
+			func(c *liq.Config[Item]) {
+				c.FlushSize(len(Data))
+			},
 		)
 		require.Nil(t, err)
 		deferClose(t, queue)
@@ -72,8 +74,10 @@ func TestQueueFlushByTimeout(t *testing.T) {
 				processed <- struct{}{}
 				return nil
 			},
-			liq.WithFlushSize[Item](len(Data)*2),
-			liq.WithFlushTimeout[Item](timeout),
+			func(c *liq.Config[Item]) {
+				c.FlushSize(len(Data) * 2)
+				c.FlushTimeout(timeout)
+			},
 		)
 		require.Nil(t, err)
 		deferClose(t, queue)
@@ -111,8 +115,10 @@ func TestQueueManualFlush(t *testing.T) {
 				processed <- struct{}{}
 				return nil
 			},
-			liq.WithFlushSize[Item](len(Data)*2),
-			liq.WithFlushTimeout[Item](time.Hour),
+			func(c *liq.Config[Item]) {
+				c.FlushSize(len(Data) * 2)
+				c.FlushTimeout(time.Hour)
+			},
 		)
 		require.Nil(t, err)
 		deferClose(t, queue)
@@ -158,8 +164,10 @@ func TestPushOnClose(t *testing.T) {
 
 				return nil
 			},
-			liq.WithFile[Item](file),
-			liq.WithFlushSize[Item](len(Data)),
+			func(c *liq.Config[Item]) {
+				c.File(file)
+				c.FlushSize(len(Data))
+			},
 		)
 		require.Nil(t, err)
 
@@ -198,7 +206,9 @@ func TestPushOnClose(t *testing.T) {
 				processed <- struct{}{}
 				return nil
 			},
-			liq.WithFile[Item](file),
+			func(c *liq.Config[Item]) {
+				c.File(file)
+			},
 		)
 		require.Nil(t, err)
 		deferClose(t, queue)
@@ -219,8 +229,10 @@ func TestDataPersistenceBetweenRestarts(t *testing.T) {
 				<-ctx.Done()
 				return ctx.Err()
 			},
-			liq.WithFile[Item](file),
-			liq.WithFlushSize[Item](len(Data)/2+1),
+			func(c *liq.Config[Item]) {
+				c.File(file)
+				c.FlushSize(len(Data)/2 + 1)
+			},
 		)
 		require.Nil(t, err)
 
@@ -249,8 +261,10 @@ func TestDataPersistenceBetweenRestarts(t *testing.T) {
 				processed <- struct{}{}
 				return nil
 			},
-			liq.WithFile[Item](file),
-			liq.WithBatches[Item](2),
+			func(c *liq.Config[Item]) {
+				c.File(file)
+				c.Batches(2)
+			},
 		)
 		require.Nil(t, err)
 		deferClose(t, queue)
@@ -276,8 +290,10 @@ func TestMultipleBatches(t *testing.T) {
 				<-ctx.Done()
 				return ctx.Err()
 			},
-			liq.WithFile[Item](file),
-			liq.WithFlushSize[Item](batchSize),
+			func(c *liq.Config[Item]) {
+				c.File(file)
+				c.FlushSize(batchSize)
+			},
 		)
 		require.Nil(t, err)
 
@@ -308,8 +324,10 @@ func TestMultipleBatches(t *testing.T) {
 				processed <- struct{}{}
 				return nil
 			},
-			liq.WithFile[Item](file),
-			liq.WithBatches[Item](batches),
+			func(c *liq.Config[Item]) {
+				c.File(file)
+				c.Batches(batches)
+			},
 		)
 		require.Nil(t, err)
 		deferClose(t, queue)
@@ -339,8 +357,10 @@ func TestMultipleWorkers(t *testing.T) {
 				<-ctx.Done()
 				return ctx.Err()
 			},
-			liq.WithFile[Item](file),
-			liq.WithFlushSize[Item](batchSize),
+			func(c *liq.Config[Item]) {
+				c.File(file)
+				c.FlushSize(batchSize)
+			},
 		)
 		require.Nil(t, err)
 
@@ -360,8 +380,10 @@ func TestMultipleWorkers(t *testing.T) {
 				processed <- struct{}{}
 				return nil
 			},
-			liq.WithFile[Item](file),
-			liq.WithWorkers[Item](workers),
+			func(c *liq.Config[Item]) {
+				c.File(file)
+				c.Workers(workers)
+			},
 		)
 		require.Nil(t, err)
 		deferClose(t, queue)
@@ -392,12 +414,14 @@ func TestProcessRetries(t *testing.T) {
 				processed <- struct{}{}
 				return errors.New("retry")
 			},
-			liq.WithWorkers[Item](workers),
-			liq.WithRetryPolicy[Item](retry.
-				NewFixed(3, interval).
-				WithJitter(0).
-				WithCooldown(cooldown),
-			),
+			func(c *liq.Config[Item]) {
+				c.Workers(workers)
+				c.RetryPolicy(retry.
+					NewFixed(3, interval).
+					WithJitter(0).
+					WithCooldown(cooldown),
+				)
+			},
 		)
 		require.Nil(t, err)
 		deferClose(t, queue)

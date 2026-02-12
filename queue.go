@@ -18,7 +18,7 @@ var (
 )
 
 type Queue[Item any] struct {
-	cfg     *config[Item]
+	cfg     *Config[Item]
 	storage *sqlite.Storage
 
 	push    chan Item
@@ -40,11 +40,13 @@ type Queue[Item any] struct {
 
 type ProcessFunc[Item any] = func(ctx context.Context, queue *Queue[Item], batch iter.Seq[Item]) error
 
+type ConfigFunc[Item any] = func(c *Config[Item])
+
 func New[Item any](
 	processFunc ProcessFunc[Item],
-	options ...Option[Item],
+	configFunc ConfigFunc[Item],
 ) (*Queue[Item], error) {
-	cfg := newConfig(options...)
+	cfg := newConfig[Item]().Apply(configFunc)
 	storage, err := sqlite.New(
 		sqlite.WithFile(cfg.file),
 		sqlite.WithBatches(cfg.batches),
@@ -356,11 +358,6 @@ func markProcessContext(ctx context.Context) context.Context {
 func isProcessContext(ctx context.Context) bool {
 	v, ok := ctx.Value(processCtxMarker{}).(bool)
 	return ok && v
-}
-
-type processResult struct {
-	id  sqlite.BatchID
-	err error
 }
 
 type flushResult struct {

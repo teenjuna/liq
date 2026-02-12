@@ -10,9 +10,18 @@ import (
 	"github.com/teenjuna/liq/retry"
 )
 
-type Option[Item any] = func(*config[Item])
+func (c *Config[Item]) Apply(
+	// https://github.com/golang/go/issues/77249
+	// configFunc ConfigFunc[Item]
+	configFunc func(*Config[Item]),
+) *Config[Item] {
+	if configFunc != nil {
+		configFunc(c)
+	}
+	return c
+}
 
-func WithFile[Item any](file string) Option[Item] {
+func (c *Config[Item]) File(file string) *Config[Item] {
 	file = strings.TrimSpace(file)
 	if file == "" {
 		panic("file can't be blank")
@@ -20,84 +29,75 @@ func WithFile[Item any](file string) Option[Item] {
 	if strings.Contains(file, "?") {
 		panic("file can't contain ?")
 	}
-	return func(c *config[Item]) {
-		c.file = file
-	}
+	c.file = file
+	return c
 }
 
-func WithFlushSize[Item any](size int) Option[Item] {
+func (c *Config[Item]) FlushSize(size int) *Config[Item] {
 	if size <= 0 {
 		panic("flush size can't be < 1")
 	}
-	return func(c *config[Item]) {
-		c.flushSize = size
-	}
+	c.flushSize = size
+	return c
 }
 
-func WithFlushTimeout[Item any](timeout time.Duration) Option[Item] {
+func (c *Config[Item]) FlushTimeout(timeout time.Duration) *Config[Item] {
 	if timeout < 0 {
 		panic("flush timeout can't be < 0")
 	}
-	return func(c *config[Item]) {
-		c.flushTimeout = timeout
-	}
+	c.flushTimeout = timeout
+	return c
 }
 
-func WithWorkers[Item any](workers int) Option[Item] {
-	if workers < 1 {
-		panic("workers can't be < 1")
-	}
-	return func(c *config[Item]) {
-		c.workers = workers
-	}
-}
-
-func WithBatches[Item any](batches int) Option[Item] {
-	if batches <= 0 {
-		panic("batches can't be < 1")
-	}
-	return func(c *config[Item]) {
-		c.batches = batches
-	}
-}
-
-func WithCodec[Item any](codec Codec[Item]) Option[Item] {
-	if codec == nil {
-		panic("codec can't be nil")
-	}
-	return func(c *config[Item]) {
-		c.codec = codec
-	}
-}
-
-func WithBuffer[Item any](buffer Buffer[Item]) Option[Item] {
+func (c *Config[Item]) Buffer(buffer Buffer[Item]) *Config[Item] {
 	if buffer == nil {
 		panic("buffer can't be nil")
 	}
-	return func(c *config[Item]) {
-		c.buffer = buffer
-	}
+	c.buffer = buffer
+	return c
 }
 
-func WithRetryPolicy[Item any](policy RetryPolicy) Option[Item] {
+func (c *Config[Item]) Codec(codec Codec[Item]) *Config[Item] {
+	if codec == nil {
+		panic("codec can't be nil")
+	}
+	c.codec = codec
+	return c
+}
+
+func (c *Config[Item]) Workers(workers int) *Config[Item] {
+	if workers < 1 {
+		panic("workers can't be < 1")
+	}
+	c.workers = workers
+	return c
+}
+
+func (c *Config[Item]) Batches(batches int) *Config[Item] {
+	if batches <= 0 {
+		panic("batches can't be < 1")
+	}
+	c.batches = batches
+	return c
+}
+
+func (c *Config[Item]) RetryPolicy(policy RetryPolicy) *Config[Item] {
 	if policy == nil {
 		panic("policy can't be nil")
 	}
-	return func(c *config[Item]) {
-		c.retryPolicy = policy
-	}
+	c.retryPolicy = policy
+	return c
 }
 
-func WithPrometheus[Item any](
+func (c *Config[Item]) Prometheus(
 	registerer prometheus.Registerer,
 	namespace, subsystem string,
-) Option[Item] {
-	return func(c *config[Item]) {
-		c.metrics = newMetrics(registerer, namespace, subsystem)
-	}
+) *Config[Item] {
+	c.metrics = newMetrics(registerer, namespace, subsystem)
+	return c
 }
 
-type config[Item any] struct {
+type Config[Item any] struct {
 	file         string
 	codec        Codec[Item]
 	buffer       Buffer[Item]
@@ -109,21 +109,14 @@ type config[Item any] struct {
 	metrics      *metrics
 }
 
-func newConfig[Item any](options ...Option[Item]) *config[Item] {
-	options = append([]Option[Item]{
-		WithFile[Item](":memory:"),
-		WithCodec(json.New[Item]()),
-		WithBuffer(buffer.NewAppending[Item]()),
-		WithRetryPolicy[Item](retry.NewImmediate(0)),
-		WithBatches[Item](1),
-		WithWorkers[Item](1),
-		WithPrometheus[Item](nil, "namespace", "subsystem"),
-	}, options...)
-
-	cfg := config[Item]{}
-	for _, opt := range options {
-		opt(&cfg)
-	}
-
-	return &cfg
+func newConfig[Item any]() *Config[Item] {
+	cfg := &Config[Item]{}
+	cfg.File(":memory:")
+	cfg.Codec(json.New[Item]())
+	cfg.Buffer(buffer.NewAppending[Item]())
+	cfg.RetryPolicy(retry.NewImmediate(0))
+	cfg.Batches(1)
+	cfg.Workers(1)
+	cfg.Prometheus(nil, "namespace", "subsystem")
+	return cfg
 }
