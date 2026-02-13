@@ -53,11 +53,12 @@ func New[Item any](
 ) {
 	cfg := &Config[Item]{}
 	cfg.File(":memory:")
+	cfg.FlushSize(1)
+	cfg.Batches(1)
+	cfg.Workers(1)
 	cfg.Codec(func() Codec[Item] { return json.New[Item]() })
 	cfg.Buffer(func() Buffer[Item] { return buffer.Appending[Item]() })
 	cfg.RetryPolicy(func() RetryPolicy { return retry.Immediate(0) })
-	cfg.Batches(1)
-	cfg.Workers(1)
 	cfg.Prometheus(nil)
 	cfg.Apply(configFunc)
 
