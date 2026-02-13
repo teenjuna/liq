@@ -13,10 +13,10 @@ type metrics struct {
 	processDuration prometheus.Histogram
 }
 
-func newMetrics(registerer prometheus.Registerer, namespace, subsystem string) *metrics {
-	registerer = prometheus.WrapRegistererWith(
-		prometheus.Labels{"component": "liq"},
-		registerer,
+func newMetrics(registerer prometheus.Registerer) *metrics {
+	const (
+		namespace = "liq"
+		subsystem = ""
 	)
 
 	m := metrics{

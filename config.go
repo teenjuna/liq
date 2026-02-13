@@ -89,11 +89,8 @@ func (c *Config[Item]) RetryPolicy(policy RetryPolicy) *Config[Item] {
 	return c
 }
 
-func (c *Config[Item]) Prometheus(
-	registerer prometheus.Registerer,
-	namespace, subsystem string,
-) *Config[Item] {
-	c.metrics = newMetrics(registerer, namespace, subsystem)
+func (c *Config[Item]) Prometheus(registerer prometheus.Registerer) *Config[Item] {
+	c.metrics = newMetrics(registerer)
 	return c
 }
 
@@ -117,6 +114,6 @@ func newConfig[Item any]() *Config[Item] {
 	cfg.RetryPolicy(retry.NewImmediate(0))
 	cfg.Batches(1)
 	cfg.Workers(1)
-	cfg.Prometheus(nil, "namespace", "subsystem")
+	cfg.Prometheus(nil)
 	return cfg
 }
