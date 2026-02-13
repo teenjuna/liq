@@ -9,26 +9,26 @@ import (
 
 // TODO: maybe delete this and just use Fixed(0, 0) by default?
 
-type Immediate struct {
+type ImmediateRetryPolicy struct {
 	attempted int
 	attempts  int
 	infinite  bool
 	cooldown  time.Duration
 }
 
-var _ internal.RetryPolicy = (*Immediate)(nil)
+var _ internal.RetryPolicy = (*ImmediateRetryPolicy)(nil)
 
-func NewImmediate(attempts int) *Immediate {
+func Immediate(attempts int) *ImmediateRetryPolicy {
 	if attempts < 0 {
 		panic("attempts can't be < 0")
 	}
-	return &Immediate{
+	return &ImmediateRetryPolicy{
 		attempts: attempts,
 		infinite: attempts == 0,
 	}
 }
 
-func (r *Immediate) WithCooldown(cooldown time.Duration) *Immediate {
+func (r *ImmediateRetryPolicy) WithCooldown(cooldown time.Duration) *ImmediateRetryPolicy {
 	if r.infinite && cooldown > 0 {
 		panic("can't set cooldown with infinite attempts")
 	}
@@ -39,7 +39,7 @@ func (r *Immediate) WithCooldown(cooldown time.Duration) *Immediate {
 	return r
 }
 
-func (r *Immediate) Attempt(ctx context.Context) (ok bool) {
+func (r *ImmediateRetryPolicy) Attempt(ctx context.Context) (ok bool) {
 	defer func() {
 		if ok && !r.infinite {
 			r.attempted += 1
@@ -53,6 +53,6 @@ func (r *Immediate) Attempt(ctx context.Context) (ok bool) {
 	return ctx.Err() == nil
 }
 
-func (r *Immediate) Cooldown() time.Duration {
+func (r *ImmediateRetryPolicy) Cooldown() time.Duration {
 	return r.cooldown
 }

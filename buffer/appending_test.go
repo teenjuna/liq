@@ -26,7 +26,7 @@ func TestAppendingBuffer(t *testing.T) {
 		})
 	}
 
-	buffer := buffer.NewAppending[Item]()
+	buffer := buffer.Appending[Item]()
 	require.Equal(t, buffer.Size(), 0)
 
 	for i, item := range input {

@@ -35,7 +35,7 @@ func TestMergingBuffer(t *testing.T) {
 	}
 	slices.SortFunc(input, cmp)
 
-	buffer := buffer.NewMerging(
+	buffer := buffer.Merging(
 		func(i Item) string { return i.ID },
 		merge,
 	)

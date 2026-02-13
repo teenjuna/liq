@@ -47,12 +47,15 @@ type ConfigFunc[Item any] = func(c *Config[Item])
 func New[Item any](
 	processFunc ProcessFunc[Item],
 	configFunc ConfigFunc[Item],
-) (*Queue[Item], error) {
+) (
+	*Queue[Item],
+	error,
+) {
 	cfg := &Config[Item]{}
 	cfg.File(":memory:")
 	cfg.Codec(func() Codec[Item] { return json.New[Item]() })
-	cfg.Buffer(func() Buffer[Item] { return buffer.NewAppending[Item]() })
-	cfg.RetryPolicy(func() RetryPolicy { return retry.NewImmediate(0) })
+	cfg.Buffer(func() Buffer[Item] { return buffer.Appending[Item]() })
+	cfg.RetryPolicy(func() RetryPolicy { return retry.Immediate(0) })
 	cfg.Batches(1)
 	cfg.Workers(1)
 	cfg.Prometheus(nil)

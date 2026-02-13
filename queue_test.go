@@ -418,7 +418,7 @@ func TestProcessRetries(t *testing.T) {
 				c.Workers(workers)
 				c.RetryPolicy(func() liq.RetryPolicy {
 					return retry.
-						NewFixed(3, interval).
+						Fixed(3, interval).
 						WithJitter(0).
 						WithCooldown(cooldown)
 				})

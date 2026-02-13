@@ -7,26 +7,26 @@ import (
 	"github.com/teenjuna/liq/internal"
 )
 
-var _ internal.Buffer[any] = (*Merging[any, struct{}])(nil)
+var _ internal.Buffer[any] = (*MergingBuffer[any, struct{}])(nil)
 
-type Merging[Item any, Key comparable] struct {
+type MergingBuffer[Item any, Key comparable] struct {
 	items     map[Key]Item
 	keyFunc   func(Item) Key
 	mergeFunc func(Item, Item) Item
 }
 
-func NewMerging[Item any, Key comparable](
+func Merging[Item any, Key comparable](
 	keyFunc func(Item) Key,
 	mergeFunc func(Item, Item) Item,
-) *Merging[Item, Key] {
-	return &Merging[Item, Key]{
+) *MergingBuffer[Item, Key] {
+	return &MergingBuffer[Item, Key]{
 		items:     make(map[Key]Item, 0),
 		keyFunc:   keyFunc,
 		mergeFunc: mergeFunc,
 	}
 }
 
-func (b *Merging[Item, Key]) Push(item Item) {
+func (b *MergingBuffer[Item, Key]) Push(item Item) {
 	key := b.keyFunc(item)
 	if existingItem, ok := b.items[key]; ok {
 		newItem := b.mergeFunc(existingItem, item)
@@ -36,14 +36,14 @@ func (b *Merging[Item, Key]) Push(item Item) {
 	}
 }
 
-func (b *Merging[Item, Key]) Size() int {
+func (b *MergingBuffer[Item, Key]) Size() int {
 	return len(b.items)
 }
 
-func (b *Merging[Item, Key]) Iter() iter.Seq[Item] {
+func (b *MergingBuffer[Item, Key]) Iter() iter.Seq[Item] {
 	return maps.Values(b.items)
 }
 
-func (b *Merging[Item, Key]) Reset() {
+func (b *MergingBuffer[Item, Key]) Reset() {
 	clear(b.items)
 }

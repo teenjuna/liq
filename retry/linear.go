@@ -7,7 +7,7 @@ import (
 	"github.com/teenjuna/liq/internal"
 )
 
-type Linear struct {
+type LinearRetryPolicy struct {
 	attempted   int
 	attempts    int
 	infinite    bool
@@ -19,9 +19,9 @@ type Linear struct {
 	cooldown    time.Duration
 }
 
-var _ internal.RetryPolicy = (*Linear)(nil)
+var _ internal.RetryPolicy = (*LinearRetryPolicy)(nil)
 
-func NewLinear(attempts int, minInterval, maxInterval time.Duration) *Linear {
+func Linear(attempts int, minInterval, maxInterval time.Duration) *LinearRetryPolicy {
 	if attempts < 0 {
 		panic("attempts can't be < 0")
 	}
@@ -39,7 +39,7 @@ func NewLinear(attempts int, minInterval, maxInterval time.Duration) *Linear {
 		step = (maxInterval - minInterval) / time.Duration((attempts - 2))
 	}
 
-	return &Linear{
+	return &LinearRetryPolicy{
 		attempts:    attempts,
 		infinite:    attempts == 0,
 		minInterval: minInterval,
@@ -49,7 +49,7 @@ func NewLinear(attempts int, minInterval, maxInterval time.Duration) *Linear {
 	}
 }
 
-func (r *Linear) WithStep(step time.Duration) *Linear {
+func (r *LinearRetryPolicy) WithStep(step time.Duration) *LinearRetryPolicy {
 	if step <= 0 {
 		panic("step can't be <= 0")
 	}
@@ -57,7 +57,7 @@ func (r *Linear) WithStep(step time.Duration) *Linear {
 	return r
 }
 
-func (r *Linear) WithJitter(jitter float64) *Linear {
+func (r *LinearRetryPolicy) WithJitter(jitter float64) *LinearRetryPolicy {
 	if jitter < 0 {
 		panic("jitter can't be < 0")
 	}
@@ -68,7 +68,7 @@ func (r *Linear) WithJitter(jitter float64) *Linear {
 	return r
 }
 
-func (r *Linear) WithCooldown(cooldown time.Duration) *Linear {
+func (r *LinearRetryPolicy) WithCooldown(cooldown time.Duration) *LinearRetryPolicy {
 	if r.infinite && cooldown > 0 {
 		panic("can't set cooldown with infinite attempts")
 	}
@@ -79,7 +79,7 @@ func (r *Linear) WithCooldown(cooldown time.Duration) *Linear {
 	return r
 }
 
-func (r *Linear) Attempt(ctx context.Context) (ok bool) {
+func (r *LinearRetryPolicy) Attempt(ctx context.Context) (ok bool) {
 	defer func() {
 		if ok {
 			r.attempted += 1
@@ -109,6 +109,6 @@ func (r *Linear) Attempt(ctx context.Context) (ok bool) {
 	return wait(ctx, interval, r.jitter)
 }
 
-func (r *Linear) Cooldown() time.Duration {
+func (r *LinearRetryPolicy) Cooldown() time.Duration {
 	return r.cooldown
 }

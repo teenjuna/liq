@@ -18,7 +18,7 @@ func TestCodec(t *testing.T) {
 		N2 float64
 	}
 
-	buffer := buffer.NewAppending[Item]()
+	buffer := buffer.Appending[Item]()
 	codec := json.New[Item]()
 
 	var items []Item

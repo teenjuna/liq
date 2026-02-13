@@ -7,7 +7,7 @@ import (
 	"github.com/teenjuna/liq/internal"
 )
 
-type Fixed struct {
+type FixedRetryPolicy struct {
 	attempted int
 	attempts  int
 	infinite  bool
@@ -16,16 +16,16 @@ type Fixed struct {
 	cooldown  time.Duration
 }
 
-var _ internal.RetryPolicy = (*Fixed)(nil)
+var _ internal.RetryPolicy = (*FixedRetryPolicy)(nil)
 
-func NewFixed(attempts int, interval time.Duration) *Fixed {
+func Fixed(attempts int, interval time.Duration) *FixedRetryPolicy {
 	if attempts < 0 {
 		panic("attempts can't be < 0")
 	}
 	if interval <= 0 {
 		panic("interval can't be <= 0")
 	}
-	return &Fixed{
+	return &FixedRetryPolicy{
 		attempts: attempts,
 		infinite: attempts == 0,
 		interval: interval,
@@ -33,7 +33,7 @@ func NewFixed(attempts int, interval time.Duration) *Fixed {
 	}
 }
 
-func (r *Fixed) WithJitter(jitter float64) *Fixed {
+func (r *FixedRetryPolicy) WithJitter(jitter float64) *FixedRetryPolicy {
 	if jitter < 0 {
 		panic("jitter can't be < 0")
 	}
@@ -44,7 +44,7 @@ func (r *Fixed) WithJitter(jitter float64) *Fixed {
 	return r
 }
 
-func (r *Fixed) WithCooldown(cooldown time.Duration) *Fixed {
+func (r *FixedRetryPolicy) WithCooldown(cooldown time.Duration) *FixedRetryPolicy {
 	if r.infinite && cooldown > 0 {
 		panic("can't set cooldown with infinite attempts")
 	}
@@ -55,7 +55,7 @@ func (r *Fixed) WithCooldown(cooldown time.Duration) *Fixed {
 	return r
 }
 
-func (r *Fixed) Attempt(ctx context.Context) (ok bool) {
+func (r *FixedRetryPolicy) Attempt(ctx context.Context) (ok bool) {
 	defer func() {
 		if ok {
 			r.attempted += 1
@@ -73,6 +73,6 @@ func (r *Fixed) Attempt(ctx context.Context) (ok bool) {
 	return wait(ctx, r.interval, r.jitter)
 }
 
-func (r *Fixed) Cooldown() time.Duration {
+func (r *FixedRetryPolicy) Cooldown() time.Duration {
 	return r.cooldown
 }

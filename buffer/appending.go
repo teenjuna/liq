@@ -7,31 +7,31 @@ import (
 	"github.com/teenjuna/liq/internal"
 )
 
-var _ internal.Buffer[any] = (*Appending[any])(nil)
+var _ internal.Buffer[any] = (*AppendingBuffer[any])(nil)
 
-type Appending[Item any] struct {
+type AppendingBuffer[Item any] struct {
 	items []Item
 }
 
-func NewAppending[Item any]() *Appending[Item] {
-	return &Appending[Item]{
+func Appending[Item any]() *AppendingBuffer[Item] {
+	return &AppendingBuffer[Item]{
 		items: make([]Item, 0),
 	}
 }
 
-func (b *Appending[Item]) Push(item Item) {
+func (b *AppendingBuffer[Item]) Push(item Item) {
 	b.items = append(b.items, item)
 }
 
-func (b *Appending[Item]) Size() int {
+func (b *AppendingBuffer[Item]) Size() int {
 	return len(b.items)
 }
 
-func (b *Appending[Item]) Iter() iter.Seq[Item] {
+func (b *AppendingBuffer[Item]) Iter() iter.Seq[Item] {
 	return slices.Values(b.items)
 }
 
-func (b *Appending[Item]) Reset() {
+func (b *AppendingBuffer[Item]) Reset() {
 	clear(b.items)
 	b.items = b.items[:0]
 }

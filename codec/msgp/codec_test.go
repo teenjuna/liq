@@ -24,7 +24,7 @@ type Item struct {
 
 func TestCodec(t *testing.T) {
 
-	buffer := buffer.NewAppending[Item]()
+	buffer := buffer.Appending[Item]()
 	codec := msgp.New[Item]()
 
 	for range 2 {
