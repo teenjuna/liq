@@ -76,9 +76,3 @@ func (r *Fixed) Attempt(ctx context.Context) (ok bool) {
 func (r *Fixed) Cooldown() time.Duration {
 	return r.cooldown
 }
-
-func (r *Fixed) Derive() internal.RetryPolicy {
-	return NewFixed(r.attempts, r.interval).
-		WithJitter(r.jitter).
-		WithCooldown(r.cooldown)
-}

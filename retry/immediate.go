@@ -56,7 +56,3 @@ func (r *Immediate) Attempt(ctx context.Context) (ok bool) {
 func (r *Immediate) Cooldown() time.Duration {
 	return r.cooldown
 }
-
-func (r *Immediate) Derive() internal.RetryPolicy {
-	return NewImmediate(r.attempts).WithCooldown(r.cooldown)
-}

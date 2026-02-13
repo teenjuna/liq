@@ -112,10 +112,3 @@ func (r *Linear) Attempt(ctx context.Context) (ok bool) {
 func (r *Linear) Cooldown() time.Duration {
 	return r.cooldown
 }
-
-func (r *Linear) Derive() internal.RetryPolicy {
-	return NewLinear(r.attempts, r.minInterval, r.maxInterval).
-		WithStep(r.step).
-		WithJitter(r.jitter).
-		WithCooldown(r.cooldown)
-}

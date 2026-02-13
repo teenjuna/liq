@@ -70,32 +70,3 @@ func TestImmediateAttempt(t *testing.T) {
 		require.Equal(t, p.Attempt(ctx), false)
 	})
 }
-
-func TestImmediateDerive(t *testing.T) {
-	const (
-		attempts = 5
-		cooldown = time.Second
-	)
-
-	test := func(t *testing.T, p *retry.Immediate) {
-		for range attempts {
-			require.Equal(t, p.Attempt(t.Context()), true)
-		}
-		require.Equal(t, p.Attempt(t.Context()), false)
-		require.Equal(t, p.Cooldown(), cooldown)
-	}
-
-	run(t, "Derive before use", func(t *testing.T) {
-		p1 := retry.NewImmediate(attempts).WithCooldown(cooldown)
-		p2 := p1.Derive().(*retry.Immediate)
-		test(t, p1)
-		test(t, p2)
-	})
-
-	run(t, "Derive after use", func(t *testing.T) {
-		p1 := retry.NewImmediate(attempts).WithCooldown(cooldown)
-		test(t, p1)
-		p2 := p1.Derive().(*retry.Immediate)
-		test(t, p2)
-	})
-}

@@ -111,35 +111,3 @@ func TestExponentialAttempt(t *testing.T) {
 		f(0, func() { require.Equal(t, p.Attempt(ctx), false) })
 	})
 }
-
-func TestExponentialDerive(t *testing.T) {
-	const (
-		attempts    = 3
-		minInterval = time.Second
-		maxInterval = time.Second * 2
-		jitter      = 0.1
-		cooldown    = time.Second
-	)
-
-	test := func(t *testing.T, p *retry.Exponential) {
-		for range attempts {
-			require.Equal(t, p.Attempt(t.Context()), true)
-		}
-		require.Equal(t, p.Attempt(t.Context()), false)
-		require.Equal(t, p.Cooldown(), cooldown)
-	}
-
-	run(t, "Derive before use", func(t *testing.T) {
-		p1 := retry.NewExponential(attempts, minInterval, maxInterval).WithCooldown(cooldown)
-		p2 := p1.Derive().(*retry.Exponential)
-		test(t, p1)
-		test(t, p2)
-	})
-
-	run(t, "Derive after use", func(t *testing.T) {
-		p1 := retry.NewExponential(attempts, minInterval, maxInterval).WithCooldown(cooldown)
-		test(t, p1)
-		p2 := p1.Derive().(*retry.Exponential)
-		test(t, p2)
-	})
-}

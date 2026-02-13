@@ -35,7 +35,3 @@ func (b *Appending[Item]) Reset() {
 	clear(b.items)
 	b.items = b.items[:0]
 }
-
-func (b *Appending[Item]) Derive() internal.Buffer[Item] {
-	return NewAppending[Item]()
-}

@@ -8,5 +8,4 @@ import (
 type RetryPolicy interface {
 	Attempt(ctx context.Context) bool
 	Cooldown() time.Duration
-	Derive() RetryPolicy
 }

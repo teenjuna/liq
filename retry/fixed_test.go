@@ -95,34 +95,3 @@ func TestFixedAttempt(t *testing.T) {
 		f(0, func() { require.Equal(t, p.Attempt(ctx), false) })
 	})
 }
-
-func TestFixedDerive(t *testing.T) {
-	const (
-		attempts = 5
-		interval = time.Second
-		jitter   = 0.1
-		cooldown = time.Second
-	)
-
-	test := func(t *testing.T, p *retry.Fixed) {
-		for range attempts {
-			require.Equal(t, p.Attempt(t.Context()), true)
-		}
-		require.Equal(t, p.Attempt(t.Context()), false)
-		require.Equal(t, p.Cooldown(), cooldown)
-	}
-
-	run(t, "Derive before use", func(t *testing.T) {
-		p1 := retry.NewFixed(attempts, interval).WithCooldown(cooldown)
-		p2 := p1.Derive().(*retry.Fixed)
-		test(t, p1)
-		test(t, p2)
-	})
-
-	run(t, "Derive after use", func(t *testing.T) {
-		p1 := retry.NewFixed(attempts, interval).WithCooldown(cooldown)
-		test(t, p1)
-		p2 := p1.Derive().(*retry.Fixed)
-		test(t, p2)
-	})
-}

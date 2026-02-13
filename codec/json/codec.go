@@ -49,7 +49,3 @@ func (c *Codec[Item]) Decode(data []byte, buffer internal.Buffer[Item]) error {
 
 	return nil
 }
-
-func (c *Codec[Item]) Derive() internal.Codec[Item] {
-	return New[Item]()
-}

@@ -106,10 +106,3 @@ func (r *Exponential) Attempt(ctx context.Context) (ok bool) {
 func (r *Exponential) Cooldown() time.Duration {
 	return r.cooldown
 }
-
-func (r *Exponential) Derive() internal.RetryPolicy {
-	return NewExponential(r.attempts, r.minInterval, r.maxInterval).
-		WithBase(r.base).
-		WithJitter(r.jitter).
-		WithCooldown(r.cooldown)
-}

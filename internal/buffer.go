@@ -7,5 +7,4 @@ type Buffer[Item any] interface {
 	Size() int
 	Iter() iter.Seq[Item]
 	Reset()
-	Derive() Buffer[Item]
 }

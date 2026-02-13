@@ -1,9 +1,8 @@
 package msgp
 
 import (
-	"github.com/tinylib/msgp/msgp"
-
 	"github.com/teenjuna/liq/internal"
+	"github.com/tinylib/msgp/msgp"
 )
 
 type Codec[Item any, ItemPtr msgpable[Item]] struct {
@@ -46,10 +45,6 @@ func (c *Codec[Item, ItemPtr]) Decode(data []byte, buffer internal.Buffer[Item])
 	}
 
 	return nil
-}
-
-func (c *Codec[Item, ItemPtr]) Derive() internal.Codec[Item] {
-	return New[Item, ItemPtr]()
 }
 
 type msgpable[Item any] interface {

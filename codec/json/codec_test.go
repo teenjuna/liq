@@ -43,7 +43,4 @@ func TestCodec(t *testing.T) {
 
 	bufferItems := slices.Collect(buffer.Iter())
 	require.Equal(t, bufferItems, items)
-
-	derived := codec.Derive()
-	require.NotEqual(t, derived, codec)
 }

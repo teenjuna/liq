@@ -5,10 +5,19 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/teenjuna/liq/buffer"
-	"github.com/teenjuna/liq/codec/json"
-	"github.com/teenjuna/liq/retry"
 )
+
+type Config[Item any] struct {
+	file         string
+	codec        func() Codec[Item]
+	buffer       func() Buffer[Item]
+	retryPolicy  func() RetryPolicy
+	flushSize    int
+	flushTimeout time.Duration
+	workers      int
+	batches      int
+	metrics      *metrics
+}
 
 func (c *Config[Item]) Apply(
 	// https://github.com/golang/go/issues/77249
@@ -49,7 +58,7 @@ func (c *Config[Item]) FlushTimeout(timeout time.Duration) *Config[Item] {
 	return c
 }
 
-func (c *Config[Item]) Buffer(buffer Buffer[Item]) *Config[Item] {
+func (c *Config[Item]) Buffer(buffer func() Buffer[Item]) *Config[Item] {
 	if buffer == nil {
 		panic("buffer can't be nil")
 	}
@@ -57,7 +66,7 @@ func (c *Config[Item]) Buffer(buffer Buffer[Item]) *Config[Item] {
 	return c
 }
 
-func (c *Config[Item]) Codec(codec Codec[Item]) *Config[Item] {
+func (c *Config[Item]) Codec(codec func() Codec[Item]) *Config[Item] {
 	if codec == nil {
 		panic("codec can't be nil")
 	}
@@ -81,7 +90,7 @@ func (c *Config[Item]) Batches(batches int) *Config[Item] {
 	return c
 }
 
-func (c *Config[Item]) RetryPolicy(policy RetryPolicy) *Config[Item] {
+func (c *Config[Item]) RetryPolicy(policy func() RetryPolicy) *Config[Item] {
 	if policy == nil {
 		panic("policy can't be nil")
 	}
@@ -92,28 +101,4 @@ func (c *Config[Item]) RetryPolicy(policy RetryPolicy) *Config[Item] {
 func (c *Config[Item]) Prometheus(registerer prometheus.Registerer) *Config[Item] {
 	c.metrics = newMetrics(registerer)
 	return c
-}
-
-type Config[Item any] struct {
-	file         string
-	codec        Codec[Item]
-	buffer       Buffer[Item]
-	retryPolicy  RetryPolicy
-	flushSize    int
-	flushTimeout time.Duration
-	workers      int
-	batches      int
-	metrics      *metrics
-}
-
-func newConfig[Item any]() *Config[Item] {
-	cfg := &Config[Item]{}
-	cfg.File(":memory:")
-	cfg.Codec(json.New[Item]())
-	cfg.Buffer(buffer.NewAppending[Item]())
-	cfg.RetryPolicy(retry.NewImmediate(0))
-	cfg.Batches(1)
-	cfg.Workers(1)
-	cfg.Prometheus(nil)
-	return cfg
 }

@@ -47,7 +47,3 @@ func (b *Merging[Item, Key]) Iter() iter.Seq[Item] {
 func (b *Merging[Item, Key]) Reset() {
 	clear(b.items)
 }
-
-func (b *Merging[Item, Key]) Derive() internal.Buffer[Item] {
-	return NewMerging(b.keyFunc, b.mergeFunc)
-}
