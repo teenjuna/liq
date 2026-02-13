@@ -3,11 +3,7 @@ package buffer
 import (
 	"iter"
 	"slices"
-
-	"github.com/teenjuna/liq/internal"
 )
-
-var _ internal.Buffer[any] = (*AppendingBuffer[any])(nil)
 
 type AppendingBuffer[Item any] struct {
 	items []Item

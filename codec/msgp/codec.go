@@ -1,15 +1,14 @@
 package msgp
 
 import (
-	"github.com/teenjuna/liq/internal"
+	"iter"
+
 	"github.com/tinylib/msgp/msgp"
 )
 
 type Codec[Item any, ItemPtr msgpable[Item]] struct {
 	buf []byte
 }
-
-var _ internal.Codec[msgp.Raw] = (*Codec[msgp.Raw, *msgp.Raw])(nil)
 
 func New[Item any, ItemPtr msgpable[Item]]() *Codec[Item, ItemPtr] {
 	buf := make([]byte, 0)
@@ -18,9 +17,9 @@ func New[Item any, ItemPtr msgpable[Item]]() *Codec[Item, ItemPtr] {
 	}
 }
 
-func (c *Codec[Item, ItemPtr]) Encode(buffer internal.Buffer[Item]) ([]byte, error) {
+func (c *Codec[Item, ItemPtr]) Encode(batch iter.Seq[Item]) ([]byte, error) {
 	c.buf = c.buf[:0]
-	for item := range buffer.Iter() {
+	for item := range batch {
 		b, err := ItemPtr(&item).MarshalMsg(c.buf)
 		if err != nil {
 			return nil, err
@@ -31,7 +30,7 @@ func (c *Codec[Item, ItemPtr]) Encode(buffer internal.Buffer[Item]) ([]byte, err
 	return c.buf, nil
 }
 
-func (c *Codec[Item, ItemPtr]) Decode(data []byte, buffer internal.Buffer[Item]) error {
+func (c *Codec[Item, ItemPtr]) Decode(data []byte, push func(Item)) error {
 	for {
 		var item Item
 		d, err := ItemPtr(&item).UnmarshalMsg(data)
@@ -41,7 +40,7 @@ func (c *Codec[Item, ItemPtr]) Decode(data []byte, buffer internal.Buffer[Item])
 			return err
 		}
 		data = d
-		buffer.Push(item)
+		push(item)
 	}
 
 	return nil

@@ -4,8 +4,6 @@ import (
 	"context"
 	"math"
 	"time"
-
-	"github.com/teenjuna/liq/internal"
 )
 
 type ExponentialRetryPolicy struct {
@@ -19,8 +17,6 @@ type ExponentialRetryPolicy struct {
 	maxReached  bool
 	cooldown    time.Duration
 }
-
-var _ internal.RetryPolicy = (*ExponentialRetryPolicy)(nil)
 
 func Exponential(attempts int, minInterval, maxInterval time.Duration) *ExponentialRetryPolicy {
 	if attempts < 0 {

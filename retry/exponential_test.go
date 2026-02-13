@@ -5,9 +5,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/teenjuna/liq"
 	"github.com/teenjuna/liq/internal/testing/require"
 	"github.com/teenjuna/liq/retry"
 )
+
+var _ liq.RetryPolicy = (*retry.ExponentialRetryPolicy)(nil)
 
 func TestExponential(t *testing.T) {
 	run(t, "With infinite attempts", func(t *testing.T) {

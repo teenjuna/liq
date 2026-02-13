@@ -3,16 +3,13 @@ package json
 import (
 	"bytes"
 	"encoding/json"
+	"iter"
 	"slices"
-
-	"github.com/teenjuna/liq/internal"
 )
 
 type Codec[Item any] struct {
 	buf *bytes.Buffer
 }
-
-var _ internal.Codec[any] = (*Codec[any])(nil)
 
 func New[Item any]() *Codec[Item] {
 	return &Codec[Item]{
@@ -20,8 +17,8 @@ func New[Item any]() *Codec[Item] {
 	}
 }
 
-func (c *Codec[Item]) Encode(buffer internal.Buffer[Item]) ([]byte, error) {
-	items := slices.Collect(buffer.Iter())
+func (c *Codec[Item]) Encode(batch iter.Seq[Item]) ([]byte, error) {
+	items := slices.Collect(batch)
 
 	c.buf.Reset()
 	enc := json.NewEncoder(c.buf)
@@ -37,14 +34,14 @@ func (c *Codec[Item]) Encode(buffer internal.Buffer[Item]) ([]byte, error) {
 	return out, nil
 }
 
-func (c *Codec[Item]) Decode(data []byte, buffer internal.Buffer[Item]) error {
+func (c *Codec[Item]) Decode(data []byte, push func(Item)) error {
 	var items []Item
 	if err := json.Unmarshal(data, &items); err != nil {
 		return err
 	}
 
 	for _, item := range items {
-		buffer.Push(item)
+		push(item)
 	}
 
 	return nil

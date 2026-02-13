@@ -7,9 +7,12 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/teenjuna/liq"
 	"github.com/teenjuna/liq/buffer"
 	"github.com/teenjuna/liq/internal/testing/require"
 )
+
+var _ liq.Buffer[any] = (*buffer.MergingBuffer[any, struct{}])(nil)
 
 func TestMergingBuffer(t *testing.T) {
 	type Item struct {

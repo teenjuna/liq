@@ -3,11 +3,7 @@ package buffer
 import (
 	"iter"
 	"maps"
-
-	"github.com/teenjuna/liq/internal"
 )
-
-var _ internal.Buffer[any] = (*MergingBuffer[any, struct{}])(nil)
 
 type MergingBuffer[Item any, Key comparable] struct {
 	items     map[Key]Item

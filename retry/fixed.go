@@ -3,8 +3,6 @@ package retry
 import (
 	"context"
 	"time"
-
-	"github.com/teenjuna/liq/internal"
 )
 
 type FixedRetryPolicy struct {
@@ -15,8 +13,6 @@ type FixedRetryPolicy struct {
 	interval  time.Duration
 	cooldown  time.Duration
 }
-
-var _ internal.RetryPolicy = (*FixedRetryPolicy)(nil)
 
 func Fixed(attempts int, interval time.Duration) *FixedRetryPolicy {
 	if attempts < 0 {

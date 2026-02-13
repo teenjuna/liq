@@ -3,8 +3,6 @@ package retry
 import (
 	"context"
 	"time"
-
-	"github.com/teenjuna/liq/internal"
 )
 
 type LinearRetryPolicy struct {
@@ -18,8 +16,6 @@ type LinearRetryPolicy struct {
 	maxReached  bool
 	cooldown    time.Duration
 }
-
-var _ internal.RetryPolicy = (*LinearRetryPolicy)(nil)
 
 func Linear(attempts int, minInterval, maxInterval time.Duration) *LinearRetryPolicy {
 	if attempts < 0 {

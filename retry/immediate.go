@@ -3,8 +3,6 @@ package retry
 import (
 	"context"
 	"time"
-
-	"github.com/teenjuna/liq/internal"
 )
 
 // TODO: maybe delete this and just use Fixed(0, 0) by default?
@@ -15,8 +13,6 @@ type ImmediateRetryPolicy struct {
 	infinite  bool
 	cooldown  time.Duration
 }
-
-var _ internal.RetryPolicy = (*ImmediateRetryPolicy)(nil)
 
 func Immediate(attempts int) *ImmediateRetryPolicy {
 	if attempts < 0 {

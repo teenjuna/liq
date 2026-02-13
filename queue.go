@@ -241,7 +241,7 @@ func (q *Queue[Item]) pushWorker() error {
 			q.cfg.metrics.itemsFlushed.WithLabelValues("size").Add(float64(buffer.Size()))
 		}
 
-		data, err := codec.Encode(buffer)
+		data, err := codec.Encode(buffer.Iter())
 		if err != nil {
 			err = fmt.Errorf("encode items: %w", err)
 			notify(flushCh, flushResult{err: err})
@@ -305,7 +305,7 @@ func (q *Queue[Item]) processWorker() error {
 		var items int
 		for _, batch := range batches {
 			items += batch.Size
-			if err := codec.Decode(batch.Data, buffer); err != nil {
+			if err := codec.Decode(batch.Data, buffer.Push); err != nil {
 				return fmt.Errorf("decode batch: %w", err)
 			}
 		}
