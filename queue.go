@@ -114,7 +114,7 @@ func (q *Queue[Item]) Push(ctx context.Context, item Item) error {
 
 	select {
 	case q.push <- item:
-		q.cfg.metrics.pushes.Inc()
+		q.cfg.metrics.itemsPushed.Inc()
 		return nil
 	case <-ctx.Done():
 		return ctx.Err()
@@ -202,7 +202,7 @@ func (q *Queue[Item]) pushWorker() error {
 			if buffer.Size() == 0 {
 				return nil
 			}
-			q.cfg.metrics.flushes.WithLabelValues("context").Inc()
+			q.cfg.metrics.itemsFlushed.WithLabelValues("context").Add(float64(buffer.Size()))
 
 		case flushCh = <-q.flush:
 			collect()
@@ -210,20 +210,20 @@ func (q *Queue[Item]) pushWorker() error {
 				notify(flushCh, flushResult{})
 				continue
 			}
-			q.cfg.metrics.flushes.WithLabelValues("manual").Inc()
+			q.cfg.metrics.itemsFlushed.WithLabelValues("manual").Add(float64(buffer.Size()))
 
 		case <-timeout:
 			if buffer.Size() == 0 {
 				continue
 			}
-			q.cfg.metrics.flushes.WithLabelValues("timeout").Inc()
+			q.cfg.metrics.itemsFlushed.WithLabelValues("timeout").Add(float64(buffer.Size()))
 
 		case item := <-q.push:
 			buffer.Push(item)
 			if buffer.Size() < q.cfg.flushSize {
 				continue
 			}
-			q.cfg.metrics.flushes.WithLabelValues("size").Inc()
+			q.cfg.metrics.itemsFlushed.WithLabelValues("size").Add(float64(buffer.Size()))
 		}
 
 		data, err := codec.Encode(buffer)
