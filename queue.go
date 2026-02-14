@@ -58,7 +58,7 @@ func New[Item any](
 	cfg.Workers(1)
 	cfg.Codec(func() Codec[Item] { return json.New[Item]() })
 	cfg.Buffer(func() Buffer[Item] { return buffer.Appending[Item]() })
-	cfg.RetryPolicy(func() RetryPolicy { return retry.Immediate(0) })
+	cfg.RetryPolicy(func() RetryPolicy { return retry.Fixed(0, 0) })
 	cfg.Prometheus(nil)
 	cfg.Apply(configFunc)
 

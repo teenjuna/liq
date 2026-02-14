@@ -38,10 +38,7 @@ func TestFixed(t *testing.T) {
 	})
 
 	run(t, "With invalid interval", func(t *testing.T) {
-		require.PanicWithError(t, "interval can't be <= 0", func() {
-			_ = retry.Fixed(0, 0)
-		})
-		require.PanicWithError(t, "interval can't be <= 0", func() {
+		require.PanicWithError(t, "interval can't be < 0", func() {
 			_ = retry.Fixed(0, -1)
 		})
 	})
@@ -69,7 +66,16 @@ func TestFixed(t *testing.T) {
 }
 
 func TestFixedAttempt(t *testing.T) {
-	run(t, "Finite attempts", func(t *testing.T) {
+	run(t, "Finite attempts (immediate)", func(t *testing.T) {
+		p := retry.Fixed(3, 0).WithJitter(0.1)
+		f := delayFunc(t, 0.1)
+		f(0, func() { require.Equal(t, p.Attempt(t.Context()), true) })
+		f(0, func() { require.Equal(t, p.Attempt(t.Context()), true) })
+		f(0, func() { require.Equal(t, p.Attempt(t.Context()), true) })
+		f(0, func() { require.Equal(t, p.Attempt(t.Context()), false) })
+	})
+
+	run(t, "Finite attempts (second)", func(t *testing.T) {
 		p := retry.Fixed(3, time.Second).WithJitter(0.1)
 		f := delayFunc(t, 0.1)
 		f(0, func() { require.Equal(t, p.Attempt(t.Context()), true) })

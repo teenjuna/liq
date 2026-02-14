@@ -18,8 +18,8 @@ func Fixed(attempts int, interval time.Duration) *FixedRetryPolicy {
 	if attempts < 0 {
 		panic("attempts can't be < 0")
 	}
-	if interval <= 0 {
-		panic("interval can't be <= 0")
+	if interval < 0 {
+		panic("interval can't be < 0")
 	}
 	return &FixedRetryPolicy{
 		attempts: attempts,

@@ -38,7 +38,7 @@ func PanicWithError(t *testing.T, errMsg string, f func()) {
 
 	did, msg := didPanic(f)
 	if !did {
-		t.Fatal("expected panic")
+		t.Fatalf("expected panic with msg `%s`", msg)
 	}
 	if msg != errMsg {
 		t.Fatalf("expected panic error `%s`, got `%s`", errMsg, msg)
