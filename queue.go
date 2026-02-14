@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"iter"
+	"log/slog"
 	"sync/atomic"
+	"testing"
 	"time"
 
 	"github.com/teenjuna/liq/buffer"
@@ -60,6 +62,14 @@ func New[Item any](
 	cfg.Buffer(func() Buffer[Item] { return buffer.Appending[Item]() })
 	cfg.RetryPolicy(func() RetryPolicy { return retry.Exponential(0, time.Second, time.Hour) })
 	cfg.Prometheus(nil)
+	if !testing.Testing() {
+		cfg.InternalErrorHandler(func(err error) {
+			slog.Error("Internal error", slog.String("message", err.Error()))
+		})
+		cfg.ProcessErrorHandler(func(err error) {
+			slog.Error("Process error", slog.String("message", err.Error()))
+		})
+	}
 	for _, cf := range configFuncs {
 		if cf != nil {
 			cf(cfg)
@@ -190,9 +200,21 @@ func (q *Queue[Item]) workers() {
 		case <-q.pushCtx.Done():
 		case <-q.processCtx.Done():
 		}
-		if !q.closing.Load() {
-			// TODO: maybe panic is not a good idea...
-			panic(q.Close())
+		if q.closing.Load() {
+			return
+		}
+		var errs []error
+		if err := q.pushCtx.Err(); err != nil {
+			errs = append(errs, fmt.Errorf("push worker: %w", err))
+		}
+		if err := q.processCtx.Err(); err != nil {
+			errs = append(errs, fmt.Errorf("process worker: %w", err))
+		}
+		if err := q.Close(); err != nil {
+			errs = append(errs, fmt.Errorf("close: %w", err))
+		}
+		if handler := q.cfg.internalErrorHandler; handler != nil {
+			handler(errors.Join(errs...))
 		}
 	}()
 }
@@ -331,6 +353,9 @@ func (q *Queue[Item]) processWorker() error {
 				break
 			}
 			q.cfg.metrics.processErrors.Add(1)
+			if handler := q.cfg.processErrorHandler; handler != nil {
+				handler(processErr)
+			}
 		}
 
 		batchIDs := make([]sqlite.BatchID, len(batches))

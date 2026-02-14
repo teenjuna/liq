@@ -8,15 +8,17 @@ import (
 )
 
 type Config[Item any] struct {
-	file         string
-	codec        func() Codec[Item]
-	buffer       func() Buffer[Item]
-	retryPolicy  func() RetryPolicy
-	flushSize    int
-	flushTimeout time.Duration
-	workers      int
-	batches      int
-	metrics      *metrics
+	file                 string
+	codec                func() Codec[Item]
+	buffer               func() Buffer[Item]
+	retryPolicy          func() RetryPolicy
+	flushSize            int
+	flushTimeout         time.Duration
+	workers              int
+	batches              int
+	metrics              *metrics
+	internalErrorHandler func(error)
+	processErrorHandler  func(error)
 }
 
 func (c *Config[Item]) File(file string) *Config[Item] {
@@ -89,5 +91,15 @@ func (c *Config[Item]) RetryPolicy(policy func() RetryPolicy) *Config[Item] {
 
 func (c *Config[Item]) Prometheus(registerer prometheus.Registerer) *Config[Item] {
 	c.metrics = newMetrics(registerer)
+	return c
+}
+
+func (c *Config[Item]) InternalErrorHandler(handler func(error)) *Config[Item] {
+	c.internalErrorHandler = handler
+	return c
+}
+
+func (c *Config[Item]) ProcessErrorHandler(handler func(error)) *Config[Item] {
+	c.processErrorHandler = handler
 	return c
 }
