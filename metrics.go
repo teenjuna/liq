@@ -9,6 +9,8 @@ type metrics struct {
 	items           prometheus.Gauge
 	itemsPushed     prometheus.Counter
 	itemsFlushed    *prometheus.CounterVec
+	itemsProcessed  prometheus.Counter
+	processAttempts prometheus.Counter
 	processErrors   prometheus.Counter
 	processDuration prometheus.Histogram
 }
@@ -44,6 +46,18 @@ func newMetrics(registerer prometheus.Registerer) *metrics {
 			Name:      "items_flushed",
 			Help:      "Number of items flushed from queue's buffer",
 		}, []string{"type"}),
+		itemsProcessed: prometheus.NewCounter(prometheus.CounterOpts{
+			Namespace: namespace,
+			Subsystem: subsystem,
+			Name:      "items_processed",
+			Help:      "Number of processed items",
+		}),
+		processAttempts: prometheus.NewCounter(prometheus.CounterOpts{
+			Namespace: namespace,
+			Subsystem: subsystem,
+			Name:      "process_attempts",
+			Help:      "Number of attempts of batch processing",
+		}),
 		processErrors: prometheus.NewCounter(prometheus.CounterOpts{
 			Namespace: namespace,
 			Subsystem: subsystem,
@@ -55,7 +69,7 @@ func newMetrics(registerer prometheus.Registerer) *metrics {
 			Subsystem: subsystem,
 			Name:      "process_duration",
 			Help:      "Duration of batch processing",
-			Buckets:   prometheus.ExponentialBuckets(1, 2, 8),
+			Buckets:   prometheus.ExponentialBuckets(1, 2, 12),
 		}),
 	}
 
@@ -65,6 +79,8 @@ func newMetrics(registerer prometheus.Registerer) *metrics {
 			m.items,
 			m.itemsPushed,
 			m.itemsFlushed,
+			m.itemsProcessed,
+			m.processAttempts,
 			m.processErrors,
 			m.processDuration,
 		)

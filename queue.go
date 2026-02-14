@@ -337,24 +337,27 @@ func (q *Queue[Item]) processWorker() error {
 		}
 
 		var (
-			ctx        = markProcessContext(q.processCtx)
-			retry      = q.cfg.retryPolicy()
-			ok         bool
-			processErr error
+			ok    = false
+			ctx   = markProcessContext(q.processCtx)
+			retry = q.cfg.retryPolicy()
 		)
 		for {
 			if !retry.Attempt(ctx) {
 				break
 			}
-			t := time.Now()
-			if processErr = q.processFunc(ctx, q, buffer.Iter()); processErr == nil {
-				q.cfg.metrics.processDuration.Observe(float64(time.Since(t).Milliseconds()))
+			start := time.Now()
+			q.cfg.metrics.processAttempts.Inc()
+			if err := q.processFunc(ctx, q, buffer.Iter()); err != nil {
+				q.cfg.metrics.processErrors.Inc()
+				q.cfg.metrics.processDuration.Observe(float64(time.Since(start).Milliseconds()))
+				if handler := q.cfg.processErrorHandler; handler != nil {
+					handler(err)
+				}
+			} else {
+				q.cfg.metrics.itemsProcessed.Add(float64(buffer.Size()))
+				q.cfg.metrics.processDuration.Observe(float64(time.Since(start).Milliseconds()))
 				ok = true
 				break
-			}
-			q.cfg.metrics.processErrors.Add(1)
-			if handler := q.cfg.processErrorHandler; handler != nil {
-				handler(processErr)
 			}
 		}
 
