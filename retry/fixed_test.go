@@ -10,7 +10,7 @@ import (
 	"github.com/teenjuna/liq/retry"
 )
 
-var _ liq.RetryPolicy = (*retry.FixedRetryPolicy)(nil)
+var _ liq.RetryPolicy = (*retry.FixedPolicy)(nil)
 
 func TestFixed(t *testing.T) {
 	run(t, "With infinite attempts", func(t *testing.T) {

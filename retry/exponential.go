@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-type ExponentialRetryPolicy struct {
+type ExponentialPolicy struct {
 	attempted   int
 	attempts    int
 	infinite    bool
@@ -18,7 +18,7 @@ type ExponentialRetryPolicy struct {
 	cooldown    time.Duration
 }
 
-func Exponential(attempts int, minInterval, maxInterval time.Duration) *ExponentialRetryPolicy {
+func Exponential(attempts int, minInterval, maxInterval time.Duration) *ExponentialPolicy {
 	if attempts < 0 {
 		panic("attempts can't be < 0")
 	}
@@ -29,7 +29,7 @@ func Exponential(attempts int, minInterval, maxInterval time.Duration) *Exponent
 		panic("minInterval can't be >= maxInterval")
 	}
 
-	return &ExponentialRetryPolicy{
+	return &ExponentialPolicy{
 		attempts:    attempts,
 		infinite:    attempts == 0,
 		minInterval: minInterval,
@@ -39,7 +39,7 @@ func Exponential(attempts int, minInterval, maxInterval time.Duration) *Exponent
 	}
 }
 
-func (r *ExponentialRetryPolicy) WithBase(base float64) *ExponentialRetryPolicy {
+func (r *ExponentialPolicy) WithBase(base float64) *ExponentialPolicy {
 	if base <= 1 {
 		panic("base can't be <= 1")
 	}
@@ -47,7 +47,7 @@ func (r *ExponentialRetryPolicy) WithBase(base float64) *ExponentialRetryPolicy 
 	return r
 }
 
-func (r *ExponentialRetryPolicy) WithJitter(jitter float64) *ExponentialRetryPolicy {
+func (r *ExponentialPolicy) WithJitter(jitter float64) *ExponentialPolicy {
 	if jitter < 0 {
 		panic("jitter can't be < 0")
 	}
@@ -58,7 +58,7 @@ func (r *ExponentialRetryPolicy) WithJitter(jitter float64) *ExponentialRetryPol
 	return r
 }
 
-func (r *ExponentialRetryPolicy) WithCooldown(cooldown time.Duration) *ExponentialRetryPolicy {
+func (r *ExponentialPolicy) WithCooldown(cooldown time.Duration) *ExponentialPolicy {
 	if r.infinite && cooldown > 0 {
 		panic("can't set cooldown with infinite attempts")
 	}
@@ -69,7 +69,7 @@ func (r *ExponentialRetryPolicy) WithCooldown(cooldown time.Duration) *Exponenti
 	return r
 }
 
-func (r *ExponentialRetryPolicy) Attempt(ctx context.Context) (ok bool) {
+func (r *ExponentialPolicy) Attempt(ctx context.Context) (ok bool) {
 	defer func() {
 		if ok {
 			r.attempted += 1
@@ -99,6 +99,6 @@ func (r *ExponentialRetryPolicy) Attempt(ctx context.Context) (ok bool) {
 	return wait(ctx, interval, r.jitter)
 }
 
-func (r *ExponentialRetryPolicy) Cooldown() time.Duration {
+func (r *ExponentialPolicy) Cooldown() time.Duration {
 	return r.cooldown
 }

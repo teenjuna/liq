@@ -10,7 +10,7 @@ import (
 	"github.com/teenjuna/liq/retry"
 )
 
-var _ liq.RetryPolicy = (*retry.ExponentialRetryPolicy)(nil)
+var _ liq.RetryPolicy = (*retry.ExponentialPolicy)(nil)
 
 func TestExponential(t *testing.T) {
 	run(t, "With infinite attempts", func(t *testing.T) {
