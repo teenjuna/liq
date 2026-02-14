@@ -19,17 +19,6 @@ type Config[Item any] struct {
 	metrics      *metrics
 }
 
-func (c *Config[Item]) Apply(
-	// https://github.com/golang/go/issues/77249
-	// configFunc ConfigFunc[Item]
-	configFunc func(*Config[Item]),
-) *Config[Item] {
-	if configFunc != nil {
-		configFunc(c)
-	}
-	return c
-}
-
 func (c *Config[Item]) File(file string) *Config[Item] {
 	file = strings.TrimSpace(file)
 	if file == "" {

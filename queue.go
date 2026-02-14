@@ -46,7 +46,7 @@ type ConfigFunc[Item any] = func(c *Config[Item])
 
 func New[Item any](
 	processFunc ProcessFunc[Item],
-	configFunc ConfigFunc[Item],
+	configFuncs ...ConfigFunc[Item],
 ) (
 	*Queue[Item],
 	error,
@@ -60,7 +60,11 @@ func New[Item any](
 	cfg.Buffer(func() Buffer[Item] { return buffer.Appending[Item]() })
 	cfg.RetryPolicy(func() RetryPolicy { return retry.Exponential(0, time.Second, time.Hour) })
 	cfg.Prometheus(nil)
-	cfg.Apply(configFunc)
+	for _, cf := range configFuncs {
+		if cf != nil {
+			cf(cfg)
+		}
+	}
 
 	storage, err := sqlite.New(
 		sqlite.WithFile(cfg.file),
