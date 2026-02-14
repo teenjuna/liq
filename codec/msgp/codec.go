@@ -48,11 +48,6 @@ func (c *Codec[Item, ItemPtr]) Decode(data []byte, push func(Item)) error {
 
 type msgpable[Item any] interface {
 	*Item
-	msgp.Encodable
-	msgp.Decodable
-
-	// For the future:
-
 	msgp.Marshaler
 	msgp.Unmarshaler
 }

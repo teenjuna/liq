@@ -15,7 +15,7 @@ import (
 // NOTE: For some reason, msgp generates a file that tries to import our msgp package alongside of
 // the original package, which makes the file invalid. I'm leaving the command for reference, but
 // the file should be fixed by hand...
-// msgp -file=codec_test.go -o=codec_msgp_test.go -tests=false
+// msgp -file=codec_test.go -o=codec_msgp_test.go -io=false -tests=false
 
 type Item struct {
 	ID string
