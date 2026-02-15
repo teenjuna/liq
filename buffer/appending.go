@@ -31,3 +31,7 @@ func (b *AppendingBuffer[Item]) Reset() {
 	clear(b.items)
 	b.items = b.items[:0]
 }
+
+func (b *AppendingBuffer[Item]) Derive() Buffer[Item] {
+	return Appending[Item]()
+}

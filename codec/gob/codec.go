@@ -5,6 +5,8 @@ import (
 	"encoding/gob"
 	"io"
 	"iter"
+
+	"github.com/teenjuna/liq/codec"
 )
 
 type Codec[Item any] struct {
@@ -47,4 +49,8 @@ func (c *Codec[Item]) Decode(data []byte, push func(Item)) error {
 		}
 		push(item)
 	}
+}
+
+func (c *Codec[Item]) Derive() codec.Codec[Item] {
+	return New[Item]()
 }

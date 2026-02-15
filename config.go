@@ -5,13 +5,16 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/teenjuna/liq/buffer"
+	"github.com/teenjuna/liq/codec"
+	"github.com/teenjuna/liq/retry"
 )
 
 type Config[Item any] struct {
 	file                 string
-	codec                func() Codec[Item]
-	buffer               func() Buffer[Item]
-	retryPolicy          func() RetryPolicy
+	codec                codec.Codec[Item]
+	buffer               buffer.Buffer[Item]
+	retryPolicy          retry.Policy
 	flushSize            int
 	flushTimeout         time.Duration
 	workers              int
@@ -49,7 +52,7 @@ func (c *Config[Item]) FlushTimeout(timeout time.Duration) *Config[Item] {
 	return c
 }
 
-func (c *Config[Item]) Buffer(buffer func() Buffer[Item]) *Config[Item] {
+func (c *Config[Item]) Buffer(buffer buffer.Buffer[Item]) *Config[Item] {
 	if buffer == nil {
 		panic("buffer can't be nil")
 	}
@@ -57,7 +60,7 @@ func (c *Config[Item]) Buffer(buffer func() Buffer[Item]) *Config[Item] {
 	return c
 }
 
-func (c *Config[Item]) Codec(codec func() Codec[Item]) *Config[Item] {
+func (c *Config[Item]) Codec(codec codec.Codec[Item]) *Config[Item] {
 	if codec == nil {
 		panic("codec can't be nil")
 	}
@@ -81,7 +84,7 @@ func (c *Config[Item]) Batches(batches int) *Config[Item] {
 	return c
 }
 
-func (c *Config[Item]) RetryPolicy(policy func() RetryPolicy) *Config[Item] {
+func (c *Config[Item]) RetryPolicy(policy retry.Policy) *Config[Item] {
 	if policy == nil {
 		panic("policy can't be nil")
 	}

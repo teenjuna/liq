@@ -6,12 +6,11 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/teenjuna/liq"
 	"github.com/teenjuna/liq/buffer"
 	"github.com/teenjuna/liq/internal/testing/require"
 )
 
-var _ liq.Buffer[any] = (*buffer.AppendingBuffer[any])(nil)
+var _ buffer.Buffer[any] = (*buffer.AppendingBuffer[any])(nil)
 
 func TestAppendingBuffer(t *testing.T) {
 	type Item struct {
@@ -41,6 +40,10 @@ func TestAppendingBuffer(t *testing.T) {
 	require.Equal(t, len(items), buffer.Size())
 	require.Equal(t, len(items), len(input))
 	require.Equal(t, items, input)
+
+	derived := buffer.Derive()
+	require.Equal(t, derived.Size(), 0)
+	require.Equal(t, buffer.Size(), len(input))
 
 	buffer.Reset()
 

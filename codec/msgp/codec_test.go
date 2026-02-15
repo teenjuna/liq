@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/teenjuna/liq"
 	"github.com/teenjuna/liq/buffer"
+	"github.com/teenjuna/liq/codec"
 	"github.com/teenjuna/liq/codec/msgp"
 	"github.com/teenjuna/liq/internal/testing/require"
 )
@@ -23,7 +23,7 @@ type Item struct {
 	N2 float64
 }
 
-var _ liq.Codec[Item] = (*msgp.Codec[Item, *Item])(nil)
+var _ codec.Codec[Item] = (*msgp.Codec[Item, *Item])(nil)
 
 func TestCodec(t *testing.T) {
 
@@ -55,5 +55,8 @@ func TestCodec(t *testing.T) {
 
 		bufferItems := slices.Collect(buffer.Iter())
 		require.Equal(t, bufferItems, items)
+
+		derived := codec.Derive()
+		require.NotEqual(t, derived, codec)
 	}
 }

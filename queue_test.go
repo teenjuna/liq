@@ -416,12 +416,11 @@ func TestProcessRetries(t *testing.T) {
 			},
 			func(c *liq.Config[Item]) {
 				c.Workers(workers)
-				c.RetryPolicy(func() liq.RetryPolicy {
-					return retry.
-						Fixed(3, interval).
-						WithJitter(0).
-						WithCooldown(cooldown)
-				})
+				c.RetryPolicy(retry.
+					Fixed(3, interval).
+					WithJitter(0).
+					WithCooldown(cooldown),
+				)
 			},
 		)
 		require.Nil(t, err)

@@ -72,3 +72,9 @@ func (r *FixedPolicy) Attempt(ctx context.Context) (ok bool) {
 func (r *FixedPolicy) Cooldown() time.Duration {
 	return r.cooldown
 }
+
+func (r *FixedPolicy) Derive() Policy {
+	return Fixed(r.attempts, r.interval).
+		WithJitter(r.jitter).
+		WithCooldown(r.cooldown)
+}

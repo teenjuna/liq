@@ -108,3 +108,10 @@ func (r *LinearPolicy) Attempt(ctx context.Context) (ok bool) {
 func (r *LinearPolicy) Cooldown() time.Duration {
 	return r.cooldown
 }
+
+func (r *LinearPolicy) Derive() Policy {
+	return Linear(r.attempts, r.minInterval, r.maxInterval).
+		WithStep(r.step).
+		WithJitter(r.jitter).
+		WithCooldown(r.cooldown)
+}

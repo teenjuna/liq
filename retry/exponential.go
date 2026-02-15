@@ -102,3 +102,10 @@ func (r *ExponentialPolicy) Attempt(ctx context.Context) (ok bool) {
 func (r *ExponentialPolicy) Cooldown() time.Duration {
 	return r.cooldown
 }
+
+func (r *ExponentialPolicy) Derive() Policy {
+	return Exponential(r.attempts, r.minInterval, r.maxInterval).
+		WithBase(r.base).
+		WithJitter(r.jitter).
+		WithCooldown(r.cooldown)
+}

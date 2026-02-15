@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"iter"
 	"slices"
+
+	"github.com/teenjuna/liq/codec"
 )
 
 type Codec[Item any] struct {
@@ -45,4 +47,8 @@ func (c *Codec[Item]) Decode(data []byte, push func(Item)) error {
 	}
 
 	return nil
+}
+
+func (c *Codec[Item]) Derive() codec.Codec[Item] {
+	return New[Item]()
 }

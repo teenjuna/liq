@@ -3,6 +3,7 @@ package msgp
 import (
 	"iter"
 
+	"github.com/teenjuna/liq/codec"
 	"github.com/tinylib/msgp/msgp"
 )
 
@@ -44,6 +45,10 @@ func (c *Codec[Item, ItemPtr]) Decode(data []byte, push func(Item)) error {
 	}
 
 	return nil
+}
+
+func (c *Codec[Item, ItemPtr]) Derive() codec.Codec[Item] {
+	return New[Item, ItemPtr]()
 }
 
 type msgpable[Item any] interface {

@@ -1,4 +1,4 @@
-package liq
+package buffer
 
 import "iter"
 
@@ -8,4 +8,5 @@ type Buffer[Item any] interface {
 	Size() int
 	Iter() iter.Seq[Item]
 	Reset()
+	Derive() Buffer[Item]
 }

@@ -5,12 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/teenjuna/liq"
 	"github.com/teenjuna/liq/internal/testing/require"
 	"github.com/teenjuna/liq/retry"
 )
 
-var _ liq.RetryPolicy = (*retry.LinearPolicy)(nil)
+var _ retry.Policy = (*retry.LinearPolicy)(nil)
 
 func TestLinear(t *testing.T) {
 	run(t, "With infinite attempts", func(t *testing.T) {
@@ -113,5 +112,37 @@ func TestLinearAttempt(t *testing.T) {
 		f(time.Second*3, func() { require.Equal(t, p.Attempt(ctx), true) })
 		cancel()
 		f(0, func() { require.Equal(t, p.Attempt(ctx), false) })
+	})
+}
+
+func TestLinearDerive(t *testing.T) {
+	const (
+		attempts    = 3
+		minInterval = time.Second
+		maxInterval = time.Second * 2
+		jitter      = 0.1
+		cooldown    = time.Second
+	)
+
+	test := func(t *testing.T, p *retry.LinearPolicy) {
+		for range attempts {
+			require.Equal(t, p.Attempt(t.Context()), true)
+		}
+		require.Equal(t, p.Attempt(t.Context()), false)
+		require.Equal(t, p.Cooldown(), cooldown)
+	}
+
+	run(t, "Derive before use", func(t *testing.T) {
+		p1 := retry.Linear(attempts, minInterval, maxInterval).WithCooldown(cooldown)
+		p2 := p1.Derive().(*retry.LinearPolicy)
+		test(t, p1)
+		test(t, p2)
+	})
+
+	run(t, "Derive after use", func(t *testing.T) {
+		p1 := retry.Linear(attempts, minInterval, maxInterval).WithCooldown(cooldown)
+		test(t, p1)
+		p2 := p1.Derive().(*retry.LinearPolicy)
+		test(t, p2)
 	})
 }

@@ -6,13 +6,13 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/teenjuna/liq"
 	"github.com/teenjuna/liq/buffer"
+	"github.com/teenjuna/liq/codec"
 	"github.com/teenjuna/liq/codec/gob"
 	"github.com/teenjuna/liq/internal/testing/require"
 )
 
-var _ liq.Codec[any] = (*gob.Codec[any])(nil)
+var _ codec.Codec[any] = (*gob.Codec[any])(nil)
 
 func TestCodec(t *testing.T) {
 	type Item struct {
@@ -46,4 +46,7 @@ func TestCodec(t *testing.T) {
 
 	bufferItems := slices.Collect(buffer.Iter())
 	require.Equal(t, bufferItems, items)
+
+	derived := codec.Derive()
+	require.NotEqual(t, derived, codec)
 }

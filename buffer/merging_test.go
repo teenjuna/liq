@@ -7,12 +7,11 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/teenjuna/liq"
 	"github.com/teenjuna/liq/buffer"
 	"github.com/teenjuna/liq/internal/testing/require"
 )
 
-var _ liq.Buffer[any] = (*buffer.MergingBuffer[any, struct{}])(nil)
+var _ buffer.Buffer[any] = (*buffer.MergingBuffer[any, struct{}])(nil)
 
 func TestMergingBuffer(t *testing.T) {
 	type Item struct {
@@ -69,6 +68,10 @@ func TestMergingBuffer(t *testing.T) {
 	require.Equal(t, len(items), buffer.Size())
 	require.Equal(t, len(items), len(input))
 	require.Equal(t, items, doubledInputs)
+
+	derived := buffer.Derive()
+	require.Equal(t, derived.Size(), 0)
+	require.Equal(t, buffer.Size(), len(input))
 
 	buffer.Reset()
 

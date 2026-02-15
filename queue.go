@@ -58,9 +58,9 @@ func New[Item any](
 	cfg.FlushSize(1)
 	cfg.Batches(1)
 	cfg.Workers(1)
-	cfg.Codec(func() Codec[Item] { return json.New[Item]() })
-	cfg.Buffer(func() Buffer[Item] { return buffer.Appending[Item]() })
-	cfg.RetryPolicy(func() RetryPolicy { return retry.Exponential(0, time.Second, time.Hour) })
+	cfg.Codec(json.New[Item]())
+	cfg.Buffer(buffer.Appending[Item]())
+	cfg.RetryPolicy(retry.Exponential(0, time.Second, time.Hour))
 	cfg.Prometheus(nil)
 	if !testing.Testing() {
 		cfg.InternalErrorHandler(func(err error) {
@@ -80,7 +80,7 @@ func New[Item any](
 		sqlite.WithFile(cfg.file),
 		sqlite.WithBatches(cfg.batches),
 		sqlite.WithWorkers(cfg.workers+1),
-		sqlite.WithCooldown(cfg.retryPolicy().Cooldown()),
+		sqlite.WithCooldown(cfg.retryPolicy.Cooldown()),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("open sqlite: %w", err)
@@ -221,8 +221,8 @@ func (q *Queue[Item]) workers() {
 
 func (q *Queue[Item]) pushWorker() error {
 	var (
-		buffer  = q.cfg.buffer()
-		codec   = q.cfg.codec()
+		buffer  = q.cfg.buffer.Derive()
+		codec   = q.cfg.codec.Derive()
 		timeout = ticker(q.cfg.flushTimeout)
 	)
 	collect := func() {
@@ -293,8 +293,8 @@ func (q *Queue[Item]) pushWorker() error {
 
 func (q *Queue[Item]) processWorker() error {
 	var (
-		buffer   = q.cfg.buffer()
-		codec    = q.cfg.codec()
+		buffer   = q.cfg.buffer.Derive()
+		codec    = q.cfg.codec.Derive()
 		cooldown = timer(0)
 		wait     = false
 	)
@@ -339,7 +339,7 @@ func (q *Queue[Item]) processWorker() error {
 		var (
 			ok    = false
 			ctx   = markProcessContext(q.processCtx)
-			retry = q.cfg.retryPolicy()
+			retry = q.cfg.retryPolicy.Derive()
 		)
 		for {
 			if !retry.Attempt(ctx) {

@@ -1,4 +1,4 @@
-package liq
+package codec
 
 import "iter"
 
@@ -6,4 +6,5 @@ import "iter"
 type Codec[Item any] interface {
 	Encode(batch iter.Seq[Item]) ([]byte, error)
 	Decode(data []byte, push func(Item)) error
+	Derive() Codec[Item]
 }

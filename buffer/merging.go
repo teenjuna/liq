@@ -43,3 +43,7 @@ func (b *MergingBuffer[Item, Key]) Iter() iter.Seq[Item] {
 func (b *MergingBuffer[Item, Key]) Reset() {
 	clear(b.items)
 }
+
+func (b *MergingBuffer[Item, Key]) Derive() Buffer[Item] {
+	return Merging(b.keyFunc, b.mergeFunc)
+}
