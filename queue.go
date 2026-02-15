@@ -353,7 +353,6 @@ func (q *Queue[Item]) processWorker() error {
 				break
 			} else {
 				q.cfg.metrics.processErrors.Inc()
-				q.cfg.metrics.processRetries.Inc()
 				q.cfg.metrics.processDuration.Observe(float64(time.Since(start).Milliseconds()))
 				if handler := q.cfg.processErrorHandler; handler != nil {
 					handler(err)
