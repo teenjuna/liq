@@ -346,18 +346,18 @@ func (q *Queue[Item]) processWorker() error {
 				break
 			}
 			start := time.Now()
-			q.cfg.metrics.processAttempts.Inc()
-			if err := q.processFunc(ctx, q, buffer.Iter()); err != nil {
-				q.cfg.metrics.processErrors.Inc()
-				q.cfg.metrics.processDuration.Observe(float64(time.Since(start).Milliseconds()))
-				if handler := q.cfg.processErrorHandler; handler != nil {
-					handler(err)
-				}
-			} else {
+			if err := q.processFunc(ctx, q, buffer.Iter()); err == nil {
 				q.cfg.metrics.itemsProcessed.Add(float64(buffer.Size()))
 				q.cfg.metrics.processDuration.Observe(float64(time.Since(start).Milliseconds()))
 				ok = true
 				break
+			} else {
+				q.cfg.metrics.processErrors.Inc()
+				q.cfg.metrics.processRetries.Inc()
+				q.cfg.metrics.processDuration.Observe(float64(time.Since(start).Milliseconds()))
+				if handler := q.cfg.processErrorHandler; handler != nil {
+					handler(err)
+				}
 			}
 		}
 

@@ -10,7 +10,7 @@ type metrics struct {
 	itemsPushed     prometheus.Counter
 	itemsFlushed    *prometheus.CounterVec
 	itemsProcessed  prometheus.Counter
-	processAttempts prometheus.Counter
+	processRetries  prometheus.Counter
 	processErrors   prometheus.Counter
 	processDuration prometheus.Histogram
 }
@@ -52,11 +52,11 @@ func newMetrics(registerer prometheus.Registerer) *metrics {
 			Name:      "items_processed",
 			Help:      "Number of processed items",
 		}),
-		processAttempts: prometheus.NewCounter(prometheus.CounterOpts{
+		processRetries: prometheus.NewCounter(prometheus.CounterOpts{
 			Namespace: namespace,
 			Subsystem: subsystem,
-			Name:      "process_attempts",
-			Help:      "Number of attempts of batch processing",
+			Name:      "process_retries",
+			Help:      "Number of retries of batch processing",
 		}),
 		processErrors: prometheus.NewCounter(prometheus.CounterOpts{
 			Namespace: namespace,
@@ -80,7 +80,7 @@ func newMetrics(registerer prometheus.Registerer) *metrics {
 			m.itemsPushed,
 			m.itemsFlushed,
 			m.itemsProcessed,
-			m.processAttempts,
+			m.processRetries,
 			m.processErrors,
 			m.processDuration,
 		)
