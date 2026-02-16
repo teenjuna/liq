@@ -44,8 +44,6 @@ type Queue[Item any] struct {
 
 type ProcessFunc[Item any] = func(ctx context.Context, queue *Queue[Item], batch iter.Seq[Item]) error
 
-type ConfigFunc[Item any] = func(c *Config[Item])
-
 func New[Item any](
 	processFunc ProcessFunc[Item],
 	configFuncs ...ConfigFunc[Item],
@@ -76,12 +74,12 @@ func New[Item any](
 		}
 	}
 
-	storage, err := sqlite.New(
-		sqlite.WithFile(cfg.file),
-		sqlite.WithBatches(cfg.batches),
-		sqlite.WithWorkers(cfg.workers+1),
-		sqlite.WithCooldown(cfg.retryPolicy.Cooldown()),
-	)
+	storage, err := sqlite.New(func(c *sqlite.Config) {
+		c.File(cfg.file)
+		c.Batches(cfg.batches)
+		c.Workers(cfg.workers + 1)
+		c.Cooldown(cfg.retryPolicy.Derive().Cooldown())
+	})
 	if err != nil {
 		return nil, fmt.Errorf("open sqlite: %w", err)
 	}

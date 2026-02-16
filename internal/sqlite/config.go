@@ -5,9 +5,16 @@ import (
 	"time"
 )
 
-type Option = func(*config)
+type Config struct {
+	file     string
+	workers  int
+	batches  int
+	cooldown time.Duration
+}
 
-func WithFile(file string) Option {
+type ConfigFunc = func(c *Config)
+
+func (c *Config) File(file string) {
 	file = strings.TrimSpace(file)
 	if file == "" {
 		panic("file can't be blank")
@@ -15,56 +22,26 @@ func WithFile(file string) Option {
 	if strings.Contains(file, "?") {
 		panic("file can't contain ?")
 	}
-	return func(c *config) {
-		c.file = file
-	}
+	c.file = file
 }
 
-func WithWorkers(workers int) Option {
+func (c *Config) Workers(workers int) {
 	if workers < 1 {
 		panic("workers can't be < 1")
 	}
-	return func(c *config) {
-		c.workers = workers
-	}
+	c.workers = workers
 }
 
-func WithBatches(batches int) Option {
+func (c *Config) Batches(batches int) {
 	if batches <= 0 {
 		panic("batches can't be < 1")
 	}
-	return func(c *config) {
-		c.batches = batches
-	}
+	c.batches = batches
 }
 
-func WithCooldown(cooldown time.Duration) Option {
+func (c *Config) Cooldown(cooldown time.Duration) {
 	if cooldown < 0 {
 		panic("cooldown can't be < 0")
 	}
-	return func(c *config) {
-		c.cooldown = cooldown
-	}
-}
-
-type config struct {
-	file     string
-	workers  int
-	batches  int
-	cooldown time.Duration
-}
-
-func newConfig(options ...Option) *config {
-	options = append([]Option{
-		WithFile(":memory:"),
-		WithWorkers(1),
-		WithBatches(1),
-	}, options...)
-
-	cfg := config{}
-	for _, opt := range options {
-		opt(&cfg)
-	}
-
-	return &cfg
+	c.cooldown = cooldown
 }

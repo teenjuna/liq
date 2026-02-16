@@ -10,6 +10,8 @@ import (
 	"github.com/teenjuna/liq/retry"
 )
 
+type ConfigFunc[Item any] = func(c *Config[Item])
+
 type Config[Item any] struct {
 	file                 string
 	codec                codec.Codec[Item]
@@ -24,7 +26,7 @@ type Config[Item any] struct {
 	processErrorHandler  func(error)
 }
 
-func (c *Config[Item]) File(file string) *Config[Item] {
+func (c *Config[Item]) File(file string) {
 	file = strings.TrimSpace(file)
 	if file == "" {
 		panic("file can't be blank")
@@ -33,76 +35,65 @@ func (c *Config[Item]) File(file string) *Config[Item] {
 		panic("file can't contain ?")
 	}
 	c.file = file
-	return c
 }
 
-func (c *Config[Item]) FlushSize(size int) *Config[Item] {
+func (c *Config[Item]) FlushSize(size int) {
 	if size <= 0 {
 		panic("flush size can't be < 1")
 	}
 	c.flushSize = size
-	return c
 }
 
-func (c *Config[Item]) FlushTimeout(timeout time.Duration) *Config[Item] {
+func (c *Config[Item]) FlushTimeout(timeout time.Duration) {
 	if timeout < 0 {
 		panic("flush timeout can't be < 0")
 	}
 	c.flushTimeout = timeout
-	return c
 }
 
-func (c *Config[Item]) Buffer(buffer buffer.Buffer[Item]) *Config[Item] {
+func (c *Config[Item]) Buffer(buffer buffer.Buffer[Item]) {
 	if buffer == nil {
 		panic("buffer can't be nil")
 	}
 	c.buffer = buffer
-	return c
 }
 
-func (c *Config[Item]) Codec(codec codec.Codec[Item]) *Config[Item] {
+func (c *Config[Item]) Codec(codec codec.Codec[Item]) {
 	if codec == nil {
 		panic("codec can't be nil")
 	}
 	c.codec = codec
-	return c
 }
 
-func (c *Config[Item]) Workers(workers int) *Config[Item] {
+func (c *Config[Item]) Workers(workers int) {
 	if workers < 1 {
 		panic("workers can't be < 1")
 	}
 	c.workers = workers
-	return c
 }
 
-func (c *Config[Item]) Batches(batches int) *Config[Item] {
+func (c *Config[Item]) Batches(batches int) {
 	if batches <= 0 {
 		panic("batches can't be < 1")
 	}
 	c.batches = batches
-	return c
 }
 
-func (c *Config[Item]) RetryPolicy(policy retry.Policy) *Config[Item] {
+func (c *Config[Item]) RetryPolicy(policy retry.Policy) {
 	if policy == nil {
 		panic("policy can't be nil")
 	}
 	c.retryPolicy = policy
-	return c
 }
 
-func (c *Config[Item]) Prometheus(registerer prometheus.Registerer) *Config[Item] {
+func (c *Config[Item]) Prometheus(registerer prometheus.Registerer) {
 	c.metrics = newMetrics(registerer)
-	return c
 }
 
-func (c *Config[Item]) InternalErrorHandler(handler func(error)) *Config[Item] {
+func (c *Config[Item]) InternalErrorHandler(handler func(error)) {
 	c.internalErrorHandler = handler
-	return c
 }
 
-func (c *Config[Item]) ProcessErrorHandler(handler func(error)) *Config[Item] {
+func (c *Config[Item]) ProcessErrorHandler(handler func(error)) {
 	c.processErrorHandler = handler
-	return c
 }

@@ -8,23 +8,25 @@ import (
 )
 
 func TestOptionValidation(t *testing.T) {
+	cfg := &sqlite.Config{}
+
 	require.PanicWithError(t, "file can't be blank", func() {
-		_ = sqlite.WithFile(" ")
+		cfg.File(" ")
 	})
 
 	require.PanicWithError(t, "file can't contain ?", func() {
-		_ = sqlite.WithFile("file?key=value")
+		cfg.File("file?key=value")
 	})
 
 	require.PanicWithError(t, "workers can't be < 1", func() {
-		_ = sqlite.WithWorkers(0)
+		cfg.Workers(0)
 	})
 
 	require.PanicWithError(t, "batches can't be < 1", func() {
-		_ = sqlite.WithBatches(0)
+		cfg.Batches(0)
 	})
 
 	require.PanicWithError(t, "cooldown can't be < 0", func() {
-		_ = sqlite.WithCooldown(-1)
+		cfg.Cooldown(-1)
 	})
 }

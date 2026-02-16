@@ -14,7 +14,9 @@ import (
 
 func TestNew(t *testing.T) {
 	run(t, func(t *testing.T, file string) {
-		storage, err := sqlite.New(sqlite.WithFile(file))
+		storage, err := sqlite.New(func(c *sqlite.Config) {
+			c.File(file)
+		})
 		deferClose(t, storage)
 		require.Nil(t, err)
 		require.NotNil(t, storage)
@@ -23,7 +25,9 @@ func TestNew(t *testing.T) {
 
 func TestPush(t *testing.T) {
 	run(t, func(t *testing.T, file string) {
-		storage, _ := sqlite.New(sqlite.WithFile(file))
+		storage, err := sqlite.New(func(c *sqlite.Config) {
+			c.File(file)
+		})
 
 		id, err := storage.Push([]byte{1}, 1)
 		require.Nil(t, err)
@@ -39,7 +43,9 @@ func TestPush(t *testing.T) {
 
 func TestClaim1(t *testing.T) {
 	run(t, func(t *testing.T, file string) {
-		storage, _ := sqlite.New(sqlite.WithFile(file))
+		storage, err := sqlite.New(func(c *sqlite.Config) {
+			c.File(file)
+		})
 		deferClose(t, storage)
 
 		inputs := []struct {
@@ -91,10 +97,10 @@ func TestClaim1(t *testing.T) {
 
 func TestClaim2(t *testing.T) {
 	run(t, func(t *testing.T, file string) {
-		storage, _ := sqlite.New(
-			sqlite.WithFile(file),
-			sqlite.WithBatches(2),
-		)
+		storage, _ := sqlite.New(func(c *sqlite.Config) {
+			c.File(file)
+			c.Batches(2)
+		})
 		deferClose(t, storage)
 
 		inputs := []struct {
@@ -145,11 +151,11 @@ func TestClaimAtomicity(t *testing.T) {
 		iterations = 100
 	)
 	run(t, func(t *testing.T, file string) {
-		storage, _ := sqlite.New(
-			sqlite.WithFile(file),
-			sqlite.WithWorkers(workers),
-			sqlite.WithBatches(1),
-		)
+		storage, _ := sqlite.New(func(c *sqlite.Config) {
+			c.File(file)
+			c.Workers(workers)
+			c.Batches(1)
+		})
 		deferClose(t, storage)
 
 		_, _ = storage.Push([]byte{1, 2}, 1)
@@ -182,10 +188,10 @@ func TestClaimAtomicity(t *testing.T) {
 
 func TestRelease(t *testing.T) {
 	run(t, func(t *testing.T, file string) {
-		storage, _ := sqlite.New(
-			sqlite.WithFile(file),
-			sqlite.WithBatches(2),
-		)
+		storage, _ := sqlite.New(func(c *sqlite.Config) {
+			c.File(file)
+			c.Batches(2)
+		})
 		deferClose(t, storage)
 
 		inputs := []struct {
@@ -241,11 +247,11 @@ func TestReleaseCooldown(t *testing.T) {
 		cooldown = time.Minute
 	)
 	run(t, func(t *testing.T, file string) {
-		storage, _ := sqlite.New(
-			sqlite.WithFile(file),
-			sqlite.WithBatches(2),
-			sqlite.WithCooldown(cooldown),
-		)
+		storage, _ := sqlite.New(func(c *sqlite.Config) {
+			c.File(file)
+			c.Batches(2)
+			c.Cooldown(cooldown)
+		})
 		deferClose(t, storage)
 
 		inputs := []struct {
@@ -297,10 +303,10 @@ func TestReleaseCooldown(t *testing.T) {
 
 func TestDelete(t *testing.T) {
 	run(t, func(t *testing.T, file string) {
-		storage, _ := sqlite.New(
-			sqlite.WithFile(file),
-			sqlite.WithBatches(2),
-		)
+		storage, _ := sqlite.New(func(c *sqlite.Config) {
+			c.File(file)
+			c.Batches(2)
+		})
 		deferClose(t, storage)
 
 		inputs := []struct {
@@ -351,7 +357,9 @@ func TestDelete(t *testing.T) {
 
 func TestStats(t *testing.T) {
 	run(t, func(t *testing.T, file string) {
-		storage, _ := sqlite.New(sqlite.WithFile(":memory:"))
+		storage, _ := sqlite.New(func(c *sqlite.Config) {
+			c.File(file)
+		})
 		deferClose(t, storage)
 
 		inputs := []struct {

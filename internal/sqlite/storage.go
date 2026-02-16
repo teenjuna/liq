@@ -17,12 +17,19 @@ var (
 )
 
 type Storage struct {
-	cfg *config
+	cfg *Config
 	db  *sql.DB
 }
 
-func New(options ...Option) (*Storage, error) {
-	cfg := newConfig(options...)
+func New(configFuncs ...ConfigFunc) (*Storage, error) {
+	cfg := &Config{}
+	cfg.File(":memory:")
+	cfg.Workers(1)
+	cfg.Batches(1)
+	for _, cf := range configFuncs {
+		cf(cfg)
+	}
+
 	db, err := open(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("open: %w", err)
@@ -250,7 +257,7 @@ type Stats struct {
 	NextCooldownEnd time.Time
 }
 
-func open(cfg *config) (*sql.DB, error) {
+func open(cfg *Config) (*sql.DB, error) {
 	params := url.Values{}
 	params.Add("_txlock", "immediate")
 	params.Add("_timeout", "5000") // 5s
