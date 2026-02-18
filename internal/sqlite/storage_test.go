@@ -15,7 +15,7 @@ import (
 func TestNew(t *testing.T) {
 	run(t, func(t *testing.T, file string) {
 		storage, err := sqlite.New(func(c *sqlite.Config) {
-			c.File(file)
+			c.URI(file)
 		})
 		deferClose(t, storage)
 		require.Nil(t, err)
@@ -26,7 +26,7 @@ func TestNew(t *testing.T) {
 func TestPush(t *testing.T) {
 	run(t, func(t *testing.T, file string) {
 		storage, err := sqlite.New(func(c *sqlite.Config) {
-			c.File(file)
+			c.URI(file)
 		})
 
 		id, err := storage.Push([]byte{1}, 1)
@@ -44,7 +44,7 @@ func TestPush(t *testing.T) {
 func TestClaim1(t *testing.T) {
 	run(t, func(t *testing.T, file string) {
 		storage, err := sqlite.New(func(c *sqlite.Config) {
-			c.File(file)
+			c.URI(file)
 		})
 		deferClose(t, storage)
 
@@ -98,7 +98,7 @@ func TestClaim1(t *testing.T) {
 func TestClaim2(t *testing.T) {
 	run(t, func(t *testing.T, file string) {
 		storage, _ := sqlite.New(func(c *sqlite.Config) {
-			c.File(file)
+			c.URI(file)
 			c.Batches(2)
 		})
 		deferClose(t, storage)
@@ -152,7 +152,7 @@ func TestClaimAtomicity(t *testing.T) {
 	)
 	run(t, func(t *testing.T, file string) {
 		storage, _ := sqlite.New(func(c *sqlite.Config) {
-			c.File(file)
+			c.URI(file)
 			c.Workers(workers)
 			c.Batches(1)
 		})
@@ -189,7 +189,7 @@ func TestClaimAtomicity(t *testing.T) {
 func TestRelease(t *testing.T) {
 	run(t, func(t *testing.T, file string) {
 		storage, _ := sqlite.New(func(c *sqlite.Config) {
-			c.File(file)
+			c.URI(file)
 			c.Batches(2)
 		})
 		deferClose(t, storage)
@@ -248,7 +248,7 @@ func TestReleaseCooldown(t *testing.T) {
 	)
 	run(t, func(t *testing.T, file string) {
 		storage, _ := sqlite.New(func(c *sqlite.Config) {
-			c.File(file)
+			c.URI(file)
 			c.Batches(2)
 			c.Cooldown(cooldown)
 		})
@@ -304,7 +304,7 @@ func TestReleaseCooldown(t *testing.T) {
 func TestDelete(t *testing.T) {
 	run(t, func(t *testing.T, file string) {
 		storage, _ := sqlite.New(func(c *sqlite.Config) {
-			c.File(file)
+			c.URI(file)
 			c.Batches(2)
 		})
 		deferClose(t, storage)
@@ -358,7 +358,7 @@ func TestDelete(t *testing.T) {
 func TestStats(t *testing.T) {
 	run(t, func(t *testing.T, file string) {
 		storage, _ := sqlite.New(func(c *sqlite.Config) {
-			c.File(file)
+			c.URI(file)
 		})
 		deferClose(t, storage)
 

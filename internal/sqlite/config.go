@@ -1,12 +1,14 @@
 package sqlite
 
 import (
+	"fmt"
+	"net/url"
 	"strings"
 	"time"
 )
 
 type Config struct {
-	file     string
+	uri      *url.URL
 	workers  int
 	batches  int
 	cooldown time.Duration
@@ -14,15 +16,21 @@ type Config struct {
 
 type ConfigFunc = func(c *Config)
 
-func (c *Config) File(file string) {
-	file = strings.TrimSpace(file)
-	if file == "" {
-		panic("file can't be blank")
+func (c *Config) URI(uri string) {
+	if uri = strings.TrimSpace(uri); uri == "" {
+		panic("URI can't be blank")
 	}
-	if strings.Contains(file, "?") {
-		panic("file can't contain ?")
+
+	if prefix := "file:"; !strings.HasPrefix(uri, prefix) {
+		uri = prefix + uri
 	}
-	c.file = file
+
+	parsed, err := url.Parse(uri)
+	if err != nil {
+		panic(fmt.Errorf("invalid uri `%s`: %w", uri, err))
+	}
+
+	c.uri = parsed
 }
 
 func (c *Config) Workers(workers int) {

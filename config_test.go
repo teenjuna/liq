@@ -12,11 +12,11 @@ func TestOptions(t *testing.T) {
 	c := &liq.Config[any]{}
 
 	require.PanicWithError(t, "file can't be blank", func() {
-		c.File(" ")
+		c.File(liq.File(" "))
 	})
 
-	require.PanicWithError(t, "file can't contain ?", func() {
-		c.File("file?key=value")
+	require.PanicWithError(t, "file can't contain `?` symbol", func() {
+		c.File(liq.File("file?key=value"))
 	})
 
 	require.PanicWithError(t, "buffer can't be nil", func() {

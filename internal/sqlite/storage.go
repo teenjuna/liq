@@ -16,6 +16,10 @@ var (
 	ErrClosed = errors.New("storage is closed")
 )
 
+const (
+	memory = ":memory:"
+)
+
 type Storage struct {
 	cfg *Config
 	db  *sql.DB
@@ -23,7 +27,7 @@ type Storage struct {
 
 func New(configFuncs ...ConfigFunc) (*Storage, error) {
 	cfg := &Config{}
-	cfg.File(":memory:")
+	cfg.URI(memory)
 	cfg.Workers(1)
 	cfg.Batches(1)
 	for _, cf := range configFuncs {
@@ -262,8 +266,8 @@ func open(cfg *Config) (*sql.DB, error) {
 	params.Add("_txlock", "immediate")
 	params.Add("_timeout", "5000") // 5s
 	params.Add("_foreign_keys", "on")
-	if cfg.file == ":memory:" {
-		cfg.file = generateID()
+	if cfg.uri.Opaque == memory {
+		cfg.uri.Opaque = generateID()
 		params.Add("mode", "memory")
 		params.Add("cache", "shared")
 	} else {
@@ -271,10 +275,15 @@ func open(cfg *Config) (*sql.DB, error) {
 		params.Add("_sync", "normal")
 		params.Add("_cache_size", "-20000") // 20mb
 	}
+	for k, v := range cfg.uri.Query() {
+		if len(v) != 0 {
+			params.Set(k, v[0])
+		}
+	}
 
-	uri := "file:" + cfg.file + "?" + params.Encode()
+	cfg.uri.RawQuery = params.Encode()
 
-	db, err := sql.Open("sqlite3", uri)
+	db, err := sql.Open("sqlite3", cfg.uri.String())
 	if err != nil {
 		return nil, err
 	}

@@ -165,7 +165,7 @@ func TestPushOnClose(t *testing.T) {
 				return nil
 			},
 			func(c *liq.Config[Item]) {
-				c.File(file)
+				c.File(liq.File(file))
 				c.FlushSize(len(Data))
 			},
 		)
@@ -207,7 +207,7 @@ func TestPushOnClose(t *testing.T) {
 				return nil
 			},
 			func(c *liq.Config[Item]) {
-				c.File(file)
+				c.File(liq.File(file))
 			},
 		)
 		require.Nil(t, err)
@@ -230,7 +230,7 @@ func TestDataPersistenceBetweenRestarts(t *testing.T) {
 				return ctx.Err()
 			},
 			func(c *liq.Config[Item]) {
-				c.File(file)
+				c.File(liq.File(file))
 				c.FlushSize(len(Data)/2 + 1)
 			},
 		)
@@ -262,7 +262,7 @@ func TestDataPersistenceBetweenRestarts(t *testing.T) {
 				return nil
 			},
 			func(c *liq.Config[Item]) {
-				c.File(file)
+				c.File(liq.File(file))
 				c.Batches(2)
 			},
 		)
@@ -291,7 +291,7 @@ func TestMultipleBatches(t *testing.T) {
 				return ctx.Err()
 			},
 			func(c *liq.Config[Item]) {
-				c.File(file)
+				c.File(liq.File(file))
 				c.FlushSize(batchSize)
 			},
 		)
@@ -325,7 +325,7 @@ func TestMultipleBatches(t *testing.T) {
 				return nil
 			},
 			func(c *liq.Config[Item]) {
-				c.File(file)
+				c.File(liq.File(file))
 				c.Batches(batches)
 			},
 		)
@@ -358,7 +358,7 @@ func TestMultipleWorkers(t *testing.T) {
 				return ctx.Err()
 			},
 			func(c *liq.Config[Item]) {
-				c.File(file)
+				c.File(liq.File(file))
 				c.FlushSize(batchSize)
 			},
 		)
@@ -381,7 +381,7 @@ func TestMultipleWorkers(t *testing.T) {
 				return nil
 			},
 			func(c *liq.Config[Item]) {
-				c.File(file)
+				c.File(liq.File(file))
 				c.Workers(workers)
 			},
 		)

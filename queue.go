@@ -52,7 +52,7 @@ func New[Item any](
 	error,
 ) {
 	cfg := &Config[Item]{}
-	cfg.File(":memory:")
+	cfg.File(nil)
 	cfg.FlushSize(1)
 	cfg.Batches(1)
 	cfg.Workers(1)
@@ -75,7 +75,7 @@ func New[Item any](
 	}
 
 	storage, err := sqlite.New(func(c *sqlite.Config) {
-		c.File(cfg.file)
+		c.URI(cfg.file.uri())
 		c.Batches(cfg.batches)
 		c.Workers(cfg.workers + 1)
 		c.Cooldown(cfg.retryPolicy.Derive().Cooldown())

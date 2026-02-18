@@ -13,7 +13,7 @@ import (
 type ConfigFunc[Item any] = func(c *Config[Item])
 
 type Config[Item any] struct {
-	file                 string
+	file                 *FileConfig
 	codec                codec.Codec[Item]
 	buffer               buffer.Buffer[Item]
 	retryPolicy          retry.Policy
@@ -26,13 +26,12 @@ type Config[Item any] struct {
 	processErrorHandler  func(error)
 }
 
-func (c *Config[Item]) File(file string) {
-	file = strings.TrimSpace(file)
-	if file == "" {
+func (c *Config[Item]) File(file *FileConfig) {
+	if file != nil && file.path == "" {
 		panic("file can't be blank")
 	}
-	if strings.Contains(file, "?") {
-		panic("file can't contain ?")
+	if file != nil && strings.Contains(file.path, "?") {
+		panic("file can't contain `?` symbol")
 	}
 	c.file = file
 }

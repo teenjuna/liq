@@ -10,12 +10,8 @@ import (
 func TestOptionValidation(t *testing.T) {
 	cfg := &sqlite.Config{}
 
-	require.PanicWithError(t, "file can't be blank", func() {
-		cfg.File(" ")
-	})
-
-	require.PanicWithError(t, "file can't contain ?", func() {
-		cfg.File("file?key=value")
+	require.PanicWithError(t, "URI can't be blank", func() {
+		cfg.URI(" ")
 	})
 
 	require.PanicWithError(t, "workers can't be < 1", func() {
