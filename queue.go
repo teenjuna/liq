@@ -12,6 +12,7 @@ import (
 
 	"github.com/teenjuna/liq/buffer"
 	"github.com/teenjuna/liq/codec/json"
+	"github.com/teenjuna/liq/internal"
 	"github.com/teenjuna/liq/internal/sqlite"
 	"github.com/teenjuna/liq/retry"
 	"golang.org/x/sync/errgroup"
@@ -22,6 +23,7 @@ var (
 )
 
 type Queue[Item any] struct {
+	id      string
 	cfg     *Config[Item]
 	storage *sqlite.Storage
 
@@ -108,6 +110,7 @@ func New[Item any](
 	cfg.metrics.items.Add(float64(stats.Items))
 
 	queue := Queue[Item]{
+		id:      internal.GenerateID(),
 		cfg:     cfg,
 		storage: storage,
 
@@ -133,7 +136,7 @@ func New[Item any](
 
 func (q *Queue[Item]) Push(ctx context.Context, item Item) error {
 	if q.closing.Load() {
-		if !isProcessContext(ctx) {
+		if !q.isProcessContext(ctx) {
 			return ErrClosed
 		}
 		ctx = context.WithoutCancel(ctx)
@@ -336,7 +339,7 @@ func (q *Queue[Item]) processWorker() error {
 
 		var (
 			ok    = false
-			ctx   = markProcessContext(q.processCtx)
+			ctx   = q.markProcessContext(q.processCtx)
 			retry = q.cfg.retryPolicy.Derive()
 		)
 		for {
@@ -382,6 +385,15 @@ func (q *Queue[Item]) processWorker() error {
 	}
 }
 
+func (q *Queue[Item]) markProcessContext(ctx context.Context) context.Context {
+	return context.WithValue(ctx, processCtxMarker{}, q.id)
+}
+
+func (q *Queue[Item]) isProcessContext(ctx context.Context) bool {
+	id, ok := ctx.Value(processCtxMarker{}).(string)
+	return ok && id == q.id
+}
+
 func notify[T any](ch chan T, v T) {
 	if ch != nil {
 		select {
@@ -406,15 +418,6 @@ func timer(d time.Duration) <-chan time.Time {
 }
 
 type processCtxMarker struct{}
-
-func markProcessContext(ctx context.Context) context.Context {
-	return context.WithValue(ctx, processCtxMarker{}, true)
-}
-
-func isProcessContext(ctx context.Context) bool {
-	v, ok := ctx.Value(processCtxMarker{}).(bool)
-	return ok && v
-}
 
 type flushResult struct {
 	id  sqlite.BatchID

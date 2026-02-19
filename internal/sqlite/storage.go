@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math/rand/v2"
 	"net/url"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/teenjuna/liq/internal"
 )
 
 var (
@@ -52,7 +52,7 @@ func New(configFuncs ...ConfigFunc) (*Storage, error) {
 }
 
 func (s *Storage) Push(data []byte, size int) (BatchID, error) {
-	id := generateID()
+	id := internal.GenerateID()
 	_, err := s.db.Exec(
 		`
 		insert into batch (
@@ -267,7 +267,7 @@ func open(cfg *Config) (*sql.DB, error) {
 	params.Add("_timeout", "5000") // 5s
 	params.Add("_foreign_keys", "on")
 	if cfg.uri.Opaque == memory {
-		cfg.uri.Opaque = generateID()
+		cfg.uri.Opaque = internal.GenerateID()
 		params.Add("mode", "memory")
 		params.Add("cache", "shared")
 	} else {
@@ -360,14 +360,4 @@ func toTimestamp(time time.Time) int64 {
 
 func fromTimestamp(timestamp int64) time.Time {
 	return time.Unix(0, timestamp)
-}
-
-func generateID() string {
-	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	const n = 10
-	b := make([]byte, n)
-	for i := range b {
-		b[i] = charset[rand.IntN(len(charset))]
-	}
-	return string(b)
 }
