@@ -5,8 +5,9 @@ import (
 	"strings"
 )
 
-// FileConfig is a config of the file used for the SQLite database. It can be created only by the
-// [File] function.
+// FileConfig is a config of the file used for the SQLite database.
+//
+// An instance can be created only by the [File] function. The zero value is invalid.
 type FileConfig struct {
 	path    string
 	durable bool

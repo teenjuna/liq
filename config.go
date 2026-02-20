@@ -4,7 +4,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/teenjuna/liq/buffer"
 	"github.com/teenjuna/liq/codec"
 	"github.com/teenjuna/liq/retry"
@@ -140,11 +139,14 @@ func (c *Config[Item]) RetryPolicy(policy retry.Policy) {
 	c.retryPolicy = policy
 }
 
-// Prometheus sets the Prometheus registerer that will be used to provide queue's metrics.
+// Prometheus sets the [PrometheusConfig] that will be used to provide queue's metrics.
 //
-// If registerer is nil, no metrics will be provided.
-func (c *Config[Item]) Prometheus(registerer prometheus.Registerer) {
-	c.metrics = newMetrics(registerer)
+// If config is nil, no metrics will be provided.
+func (c *Config[Item]) Prometheus(config *PrometheusConfig) {
+	if config == nil {
+		config = Prometheus(nil)
+	}
+	c.metrics = config.metrics()
 }
 
 // InternalErrorHandler sets the function that will be called in case of internal error.

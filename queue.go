@@ -110,6 +110,9 @@ type Queue[Item any] struct {
 //   - [Config.Codec] is set to [json.Codec]
 //   - [Config.RetryPolicy] is set to [retry.Exponential] with infinite attempts and interval from
 //     1 second to 1 hour
+//   - [Config.Prometheus] is set to nil
+//   - [Config.InternalErrorHandler] is set to log the error using [slog.Error] (except in tests)
+//   - [Config.ProcessErrorHandler] is set to log the error using [slog.Error] (except in tests)
 func New[Item any](
 	processFunc ProcessFunc[Item],
 	configFuncs ...ConfigFunc[Item],
