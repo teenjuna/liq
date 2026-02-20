@@ -1,3 +1,4 @@
+// This package contains the main [Codec] interface and several implementations inside subpackages.
 package codec
 
 import "iter"

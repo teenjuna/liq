@@ -6,6 +6,12 @@ import (
 	"time"
 )
 
+// ExponentialPolicy is a [Policy] that implements exponential backoff retry strategy.
+//
+// The delay between retries grows exponentially: each subsequent wait interval is multiplied by
+// the base value (configured by [ExponentialPolicy.WithBase]), up to a maximum interval.
+//
+// Instances are created via [Exponential] function. The zero value is not valid.
 type ExponentialPolicy struct {
 	attempted   int
 	attempts    int
@@ -18,6 +24,16 @@ type ExponentialPolicy struct {
 	cooldown    time.Duration
 }
 
+// Exponential creates an [ExponentialPolicy].
+//
+// Zero attempts mean infinite retries.
+//
+// Panics if attempts < 0, minInterval <= 0 or maxInterval < minInterval.
+//
+// Default config:
+//   - [ExponentialPolicy.WithBase] is set to 2
+//   - [ExponentialPolicy.WithJitter] is set to 0.1 (10%)
+//   - [ExponentialPolicy.WithCooldown] is set to 0
 func Exponential(attempts int, minInterval, maxInterval time.Duration) *ExponentialPolicy {
 	if attempts < 0 {
 		panic("attempts can't be < 0")
@@ -26,7 +42,7 @@ func Exponential(attempts int, minInterval, maxInterval time.Duration) *Exponent
 		panic("minInterval can't be <= 0")
 	}
 	if minInterval >= maxInterval {
-		panic("minInterval can't be >= maxInterval")
+		panic("maxInterval can't be < minInterval")
 	}
 
 	return &ExponentialPolicy{
@@ -39,6 +55,7 @@ func Exponential(attempts int, minInterval, maxInterval time.Duration) *Exponent
 	}
 }
 
+// WithBase seths the number by which each subsequent attempt delay is multiplicated.
 func (r *ExponentialPolicy) WithBase(base float64) *ExponentialPolicy {
 	if base <= 1 {
 		panic("base can't be <= 1")
@@ -47,6 +64,8 @@ func (r *ExponentialPolicy) WithBase(base float64) *ExponentialPolicy {
 	return r
 }
 
+// WithJitter adds random jitter to the retry interval to prevent "thundering herd" problem. It is
+// a fraction of the interval (0.0 to 1.1 exclusive). Panics if the value is not in the interval.
 func (r *ExponentialPolicy) WithJitter(jitter float64) *ExponentialPolicy {
 	if jitter < 0 {
 		panic("jitter can't be < 0")
@@ -58,6 +77,9 @@ func (r *ExponentialPolicy) WithJitter(jitter float64) *ExponentialPolicy {
 	return r
 }
 
+// WithCooldown sets the duration a failed batch is unavailable before re-processing (not to be
+// confused with the interval before retry!). Panics if a cooldown > 0 is set on a policy with
+// infinite attempts or if
 func (r *ExponentialPolicy) WithCooldown(cooldown time.Duration) *ExponentialPolicy {
 	if r.infinite && cooldown > 0 {
 		panic("can't set cooldown with infinite attempts")

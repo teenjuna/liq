@@ -1,3 +1,4 @@
+// This package contains the main [Policy] interface and several implementations.
 package retry
 
 import (

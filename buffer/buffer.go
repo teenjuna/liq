@@ -1,3 +1,4 @@
+// This package contains the main [Buffer] interface and several implementations.
 package buffer
 
 import "iter"

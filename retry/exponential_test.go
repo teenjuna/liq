@@ -43,7 +43,7 @@ func TestExponential(t *testing.T) {
 		require.PanicWithError(t, "minInterval can't be <= 0", func() {
 			_ = retry.Exponential(0, 0, time.Minute)
 		})
-		require.PanicWithError(t, "minInterval can't be >= maxInterval", func() {
+		require.PanicWithError(t, "maxInterval can't be < minInterval", func() {
 			_ = retry.Exponential(0, time.Second, time.Second)
 		})
 	})

@@ -5,6 +5,12 @@ import (
 	"time"
 )
 
+// LinearPolicy is a [Policy] that implements linear backoff retry strategy.
+//
+// The delay between retries grows linearly: each subsequent wait interval is increased by
+// a fixed step value (configured by [LinearPolicy.WithStep]), up to a maximum interval.
+//
+// Instances are created via [Linear] function. The zero value is not valid.
 type LinearPolicy struct {
 	attempted   int
 	attempts    int
@@ -17,6 +23,19 @@ type LinearPolicy struct {
 	cooldown    time.Duration
 }
 
+// Linear creates a [LinearPolicy].
+//
+// Zero attempts mean infinite retries.
+//
+// Panics if attempts < 0, minInterval <= 0 or minInterval >= maxInterval.
+//
+// Default config:
+//   - [LinearPolicy.WithStep] is calculated automatically based on attempts (or minInterval in
+//     case of infinite attempts)
+//   - [LinearPolicy.WithJitter] is set to 0.1 (10%)
+//   - [LinearPolicy.WithCooldown] is set to 0
+//
+// If attempts > 2, step is calculated as: (maxInterval - minInterval) / (attempts - 2)
 func Linear(attempts int, minInterval, maxInterval time.Duration) *LinearPolicy {
 	if attempts < 0 {
 		panic("attempts can't be < 0")
@@ -45,6 +64,7 @@ func Linear(attempts int, minInterval, maxInterval time.Duration) *LinearPolicy 
 	}
 }
 
+// WithStep sets the fixed duration added to the interval for each subsequent retry attempt.
 func (r *LinearPolicy) WithStep(step time.Duration) *LinearPolicy {
 	if step <= 0 {
 		panic("step can't be <= 0")
@@ -53,6 +73,8 @@ func (r *LinearPolicy) WithStep(step time.Duration) *LinearPolicy {
 	return r
 }
 
+// WithJitter adds random jitter to the retry interval to prevent "thundering herd" problem. It is
+// a fraction of the interval (0.0 to 1.0 exclusive). Panics if the value is not in the interval.
 func (r *LinearPolicy) WithJitter(jitter float64) *LinearPolicy {
 	if jitter < 0 {
 		panic("jitter can't be < 0")
@@ -64,6 +86,9 @@ func (r *LinearPolicy) WithJitter(jitter float64) *LinearPolicy {
 	return r
 }
 
+// WithCooldown sets the duration a failed batch is unavailable before re-processing (not to be
+// confused with the interval before retry!). Panics if a cooldown > 0 is set on a policy with
+// infinite attempts or if cooldown < 0.
 func (r *LinearPolicy) WithCooldown(cooldown time.Duration) *LinearPolicy {
 	if r.infinite && cooldown > 0 {
 		panic("can't set cooldown with infinite attempts")
