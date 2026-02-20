@@ -55,7 +55,7 @@ func newMetrics(registerer prometheus.Registerer) *metrics {
 			Namespace: namespace,
 			Subsystem: subsystem,
 			Name:      "process_errors",
-			Help:      "Number of errors occured during batch processing",
+			Help:      "Number of errors occurred during batch processing",
 		}),
 		processDuration: prometheus.NewHistogram(prometheus.HistogramOpts{
 			Namespace: namespace,

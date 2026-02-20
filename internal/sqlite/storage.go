@@ -13,6 +13,7 @@ import (
 )
 
 var (
+	// ErrClosed is returned by Storage methods when the storage has been closed.
 	ErrClosed = errors.New("storage is closed")
 )
 
@@ -20,11 +21,21 @@ const (
 	memory = ":memory:"
 )
 
+// Storage is a persistent batch storage backed by SQLite.
 type Storage struct {
 	cfg *Config
 	db  *sql.DB
 }
 
+// New creates a new Storage with the provided configuration functions.
+//
+// Default configuration:
+//   - URI: ":memory:" (in-memory database)
+//   - Workers: 1
+//   - Batches: 1
+//   - Cooldown: 0
+//
+// Returns an error if the SQLite database cannot be opened or initialized.
 func New(configFuncs ...ConfigFunc) (*Storage, error) {
 	cfg := &Config{}
 	cfg.URI(memory)
@@ -51,6 +62,12 @@ func New(configFuncs ...ConfigFunc) (*Storage, error) {
 	return &storage, nil
 }
 
+// Push inserts a new batch into the storage.
+//
+// The data is encoded bytes of the batch, and size is the number of items in the batch. Returns a
+// unique BatchID that can be used to identify this batch.
+//
+// Returns [ErrClosed] if the storage has been closed.
 func (s *Storage) Push(data []byte, size int) (BatchID, error) {
 	id := internal.GenerateID()
 	_, err := s.db.Exec(
@@ -93,6 +110,17 @@ func (s *Storage) Push(data []byte, size int) (BatchID, error) {
 	return id, nil
 }
 
+// Claim atomically claims unclaimed batches for processing.
+//
+// Batches are selected based on the following criteria:
+//   - Not already claimed
+//   - Cooldown period has elapsed (cooldown_end <= now)
+//   - Ordered by push time (oldest first)
+//
+// The number of batches returned is limited by [Config.Batches].
+//
+// Returns an empty slice if no batches are available.
+// Returns [ErrClosed] if the storage has been closed.
 func (s *Storage) Claim() ([]Batch, error) {
 	rows, err := s.db.Query(
 		`
@@ -168,6 +196,13 @@ func (s *Storage) Claim() ([]Batch, error) {
 	return batches, nil
 }
 
+// Release releases one or more claimed batches back to the queue.
+//
+// The batches will be reset to unclaimed state and will have a cooldown applied if
+// [Config.Cooldown] was configured. During the cooldown period, the batches will not be eligible
+// for re-claiming.
+//
+// This is typically called when batch processing fails.
 func (s *Storage) Release(ids ...BatchID) error {
 	var cooldownEnd time.Time
 	if s.cfg.cooldown != 0 {
@@ -191,6 +226,10 @@ func (s *Storage) Release(ids ...BatchID) error {
 	return err
 }
 
+// Delete permanently removes one or more batches from the storage.
+//
+// This should be called after successful batch processing to clean up
+// processed data.
 func (s *Storage) Delete(ids ...BatchID) error {
 	_, err := s.db.Exec(
 		`
@@ -205,6 +244,10 @@ func (s *Storage) Delete(ids ...BatchID) error {
 	return err
 }
 
+// Stats returns current storage statistics.
+//
+// Returns the total number of batches, total number of items across all batches,
+// and the time when the next cooldown will expire (useful for scheduling).
 func (s *Storage) Stats() (*Stats, error) {
 	var (
 		batches         int
@@ -238,26 +281,42 @@ func (s *Storage) Stats() (*Stats, error) {
 	return &stats, nil
 }
 
+// Close closes the underlying SQLite database.
+//
+// After closing, all methods on Storage will return [ErrClosed].
 func (s *Storage) Close() error {
 	return s.db.Close()
 }
 
+// Batch represents a stored batch of items in the queue.
 type Batch struct {
-	ID           BatchID
-	Data         []byte
-	Size         int
-	PushedAt     time.Time
-	Claimed      bool
-	ClaimedAt    time.Time
+	// ID is the unique identifier of this batch.
+	ID BatchID
+	// Data is the encoded batch content.
+	Data []byte
+	// Size is the number of items in the batch.
+	Size int
+	// PushedAt is the time when the batch was originally pushed.
+	PushedAt time.Time
+	// Claimed indicates whether this batch is currently claimed by a worker.
+	Claimed bool
+	// ClaimedAt is the time when the batch was claimed.
+	ClaimedAt time.Time
+	// ClaimedTimes is the number of times this batch has been claimed.
 	ClaimedTimes int
-	CooldownEnd  time.Time
+	// CooldownEnd is the earliest time when this batch can be re-claimed.
+	CooldownEnd time.Time
 }
 
 type BatchID = string
 
+// Stats represents statistics about the storage.
 type Stats struct {
-	Batches         int
-	Items           int
+	// Batches is the total number of batches in storage.
+	Batches int
+	// Items is the total number of items across all batches.
+	Items int
+	// NextCooldownEnd is the earliest time when any batch becomes available for re-claiming.
 	NextCooldownEnd time.Time
 }
 

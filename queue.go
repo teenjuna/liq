@@ -19,9 +19,61 @@ import (
 )
 
 var (
+	// ErrClosed is the error that is returned by Queue methods when it's already closed.
 	ErrClosed = errors.New("queue is closed")
 )
 
+// ProcessFunc is a function that is used by a [Queue] to process its data.
+//
+// If non-nil error is returned, the operation will be retried based on the [Config.RetryPolicy].
+// If there are no attempts remaining, the data will be returned back into the queue.
+//
+// In most cases, the upper limit of items in the batch is equal to [Config.FlushSize] ×
+// [Config.Batches]. Some batches may be larger if they were flushed by [Queue.Flush] or
+// [Queue.Close].
+//
+// Provided context will be cancelled if [Queue.Close] is called.
+//
+// Provided queue may be used to push elements back into the queue. This will work even when the
+// queue is closing if you pass the provided context into the [Queue.Push] method.
+//
+//	Important
+//
+//	Don't ever push elements back into the queue if your function can return an error. This will
+//	lead to data duplication.
+type ProcessFunc[Item any] = func(ctx context.Context, queue *Queue[Item], batch iter.Seq[Item]) error
+
+// Queue is a buffered, batched, and persistent queue for items of type Item.
+//
+// Each opened queue expects to eventually be closed using the [Queue.Close]. Otherwise some data
+// may be lost.
+//
+// Items are pushed into the queue using the [Queue.Push]. Pushed items are stored in an in-memory
+// buffer (configured by [Config.Buffer]) until either a size (configured by [Config.FlushSize]) or
+// a time (configured by [Config.FlushTimeout]) limit is reached or [Queue.Flush] is called. When
+// that happens, the buffer is encoded into bytes (configured by [Config.Codec]) and stored in a
+// SQLite database (configured by [Config.File]).
+//
+// Each stored batch, starting from the oldest, is then retrieved by a background worker, which
+// will decode it back into a typed buffer and pass it into the queue's [ProcessFunc]. If the
+// processing is finished without an error, the batch will be deleted and the worker will retrieve
+// the next batch. Otherwise the worker tries again, according to the queue's [retry.Policy]
+// (configured by [Config.RetryPolicy]). If there are no attempts remaining, the batch will stay in
+// the SQLite database with the same priority, though it may receive a cooldown period if
+// [retry.Policy] configured it.
+//
+// The background worker may actually retrieve more than one batch at the same time. The upper
+// limit of the number of batches is configured by [Config.Batches]. When that happens, the items
+// from all batches will go through workers' own instance of a buffer configured by
+// [Config.Buffer]. This means that if the buffer implements some kind of aggregation (like
+// [buffer.Merging]), this aggregation will be applied to all the items of the retrieved batches
+// before they're passed to the [ProcessFunc] as a single batch. If the processing succeeds, all
+// the original batches will be deleted and the worker will retrieve the next set of batches. If
+// the processing fails and there are no attempts remaining, all the original batches will stay in
+// the SQLite database, just like with the one batch.
+//
+// More than one background worker can process batches. The number of workers is configured by
+// [Config.Workers]. Two workers will never retrieve the same batch.
 type Queue[Item any] struct {
 	id      string
 	cfg     *Config[Item]
@@ -44,8 +96,17 @@ type Queue[Item any] struct {
 	processGroup *errgroup.Group
 }
 
-type ProcessFunc[Item any] = func(ctx context.Context, queue *Queue[Item], batch iter.Seq[Item]) error
-
+// New creates a [Queue] with the provided [ProcessFunc] and a default [Config], which may be
+// changed with the provided list of [ConfigFunc].
+//
+// By default, the queue:
+//   - Doesn't use a file, the SQLite is in-memory (e.g. no persistence)
+//   - Flushes buffer on each push (e.g. has single-item buffers)
+//   - Uses [buffer.Appending] as a buffer
+//   - Uses [json.Codec] as a codec
+//   - Has only one processing worker which retrieves one batch
+//   - Uses [retry.Exponential] as a retry policy, with infinite attempts and interval up to an
+//     hour.
 func New[Item any](
 	processFunc ProcessFunc[Item],
 	configFuncs ...ConfigFunc[Item],
@@ -134,6 +195,11 @@ func New[Item any](
 	return &queue, nil
 }
 
+// Push pushes the item into the queue's in-memory buffer.
+//
+// It may return an error if provided context cancels before the item is pushed. It will also
+// return the [ErrClosed] if the queue is closed (except in cases when the method is called from
+// the [ProcessFunc] while the queue is still closing).
 func (q *Queue[Item]) Push(ctx context.Context, item Item) error {
 	if q.closing.Load() {
 		if !q.isProcessContext(ctx) {
@@ -151,6 +217,10 @@ func (q *Queue[Item]) Push(ctx context.Context, item Item) error {
 	}
 }
 
+// Flush flushes the queue's in-memory buffer.
+//
+// It may return an error if the provided context cancels before the flush is complete. It will
+// return the [ErrClosed] if the queue is closed.
 func (q *Queue[Item]) Flush(ctx context.Context) error {
 	resCh := make(chan flushResult, 1)
 	q.flush <- resCh
@@ -163,6 +233,15 @@ func (q *Queue[Item]) Flush(ctx context.Context) error {
 	}
 }
 
+// Close closes the queue.
+//
+// It tries to do this gracefully by following these steps:
+//  1. Prevent new items from being pushed (except the items pushed from the [ProcessFunc])
+//  2. Stop the process workers by cancelling their context, which is passed to the [ProcessFunc]
+//  3. Stop the push worker (the one that passes items into the in-memory buffer)
+//  4. Close the underlying SQLite database
+//
+// It will return the [ErrClosed] on the subsequent calls.
 func (q *Queue[Item]) Close() error {
 	// Signal to push worker that it must stop receiving external items.
 	if q.closing.Swap(true) {
