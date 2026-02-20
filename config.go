@@ -44,10 +44,10 @@ func (c *Config[Item]) File(file *FileConfig) {
 
 // FlushSize sets the size of the buffer after which it will be automatically flushed.
 //
-// Panics if size < 1.
+// Panics if size < 0.
 func (c *Config[Item]) FlushSize(size int) {
-	if size <= 0 {
-		panic("flush size can't be < 1")
+	if size < 0 {
+		panic("flush size can't be < 0")
 	}
 	c.flushSize = size
 }

@@ -2,7 +2,6 @@ package liq_test
 
 import (
 	"testing"
-	"time"
 
 	"github.com/teenjuna/liq"
 	"github.com/teenjuna/liq/internal/testing/require"
@@ -23,12 +22,12 @@ func TestOptions(t *testing.T) {
 		c.Buffer(nil)
 	})
 
-	require.PanicWithError(t, "flush size can't be < 1", func() {
-		c.FlushSize(0)
+	require.PanicWithError(t, "flush size can't be < 0", func() {
+		c.FlushSize(-1)
 	})
 
 	require.PanicWithError(t, "flush timeout can't be < 0", func() {
-		c.FlushTimeout(-time.Second)
+		c.FlushTimeout(-1)
 	})
 
 	require.PanicWithError(t, "workers can't be < 1", func() {

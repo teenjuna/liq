@@ -306,7 +306,10 @@ func (q *Queue[Item]) pushWorker() error {
 		timeout = ticker(q.cfg.flushTimeout)
 	)
 	collect := func() {
-		for buffer.Size() < q.cfg.flushSize {
+		canPushMore := func() bool {
+			return q.cfg.flushSize == 0 || buffer.Size() < q.cfg.flushSize
+		}
+		for canPushMore() {
 			select {
 			case item := <-q.push:
 				buffer.Push(item)
@@ -341,7 +344,7 @@ func (q *Queue[Item]) pushWorker() error {
 
 		case item := <-q.push:
 			buffer.Push(item)
-			if buffer.Size() < q.cfg.flushSize {
+			if q.cfg.flushSize == 0 || buffer.Size() < q.cfg.flushSize {
 				continue
 			}
 			q.cfg.metrics.itemsFlushed.WithLabelValues("size").Add(float64(buffer.Size()))

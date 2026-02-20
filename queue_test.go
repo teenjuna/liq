@@ -75,7 +75,7 @@ func TestQueueFlushByTimeout(t *testing.T) {
 				return nil
 			},
 			func(c *liq.Config[Item]) {
-				c.FlushSize(len(Data) * 2)
+				c.FlushSize(0)
 				c.FlushTimeout(timeout)
 			},
 		)
