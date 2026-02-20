@@ -34,20 +34,24 @@ func TestAppendingBuffer(t *testing.T) {
 	for i, item := range input {
 		buffer.Push(item)
 		require.Equal(t, buffer.Size(), i+1)
+		require.Equal(t, buffer.Pushes(), i+1)
 	}
 
 	items := slices.Collect(buffer.Iter())
 	require.Equal(t, len(items), buffer.Size())
+	require.Equal(t, len(items), buffer.Pushes())
 	require.Equal(t, len(items), len(input))
 	require.Equal(t, items, input)
 
 	derived := buffer.Derive()
 	require.Equal(t, derived.Size(), 0)
 	require.Equal(t, buffer.Size(), len(input))
+	require.Equal(t, buffer.Pushes(), len(input))
 
 	buffer.Reset()
 
 	items = slices.Collect(buffer.Iter())
 	require.Equal(t, buffer.Size(), 0)
+	require.Equal(t, buffer.Pushes(), 0)
 	require.Equal(t, len(items), 0)
 }

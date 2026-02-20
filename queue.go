@@ -99,14 +99,17 @@ type Queue[Item any] struct {
 // New creates a [Queue] with the provided [ProcessFunc] and a default [Config], which may be
 // changed with the provided list of [ConfigFunc].
 //
-// By default, the queue:
-//   - Doesn't use a file, the SQLite is in-memory (e.g. no persistence)
-//   - Flushes buffer on each push (e.g. has single-item buffers)
-//   - Uses [buffer.Appending] as a buffer
-//   - Uses [json.Codec] as a codec
-//   - Has only one processing worker which retrieves one batch
-//   - Uses [retry.Exponential] as a retry policy, with infinite attempts and interval up to an
-//     hour.
+// Default config:
+//   - [Config.File] is set to nil (meaning the queue is fully in-memory)
+//   - [Config.FlushSize] is set to 1
+//   - [Config.FlushPushes] is set to 0
+//   - [Config.FlushTimeout] is set to 0
+//   - [Config.Workers] is set to 1
+//   - [Config.Batches] is set to 1
+//   - [Config.Buffer] is set to [buffer.Appending]
+//   - [Config.Codec] is set to [json.Codec]
+//   - [Config.RetryPolicy] is set to [retry.Exponential] with infinite attempts and interval from
+//     1 second to 1 hour
 func New[Item any](
 	processFunc ProcessFunc[Item],
 	configFuncs ...ConfigFunc[Item],
@@ -117,6 +120,8 @@ func New[Item any](
 	cfg := &Config[Item]{}
 	cfg.File(nil)
 	cfg.FlushSize(1)
+	cfg.FlushPushes(0)
+	cfg.FlushTimeout(0)
 	cfg.Batches(1)
 	cfg.Workers(1)
 	cfg.Codec(json.New[Item]())
@@ -304,20 +309,29 @@ func (q *Queue[Item]) pushWorker() error {
 		buffer  = q.cfg.buffer.Derive()
 		codec   = q.cfg.codec.Derive()
 		timeout = ticker(q.cfg.flushTimeout)
-	)
-	collect := func() {
-		canPushMore := func() bool {
-			return q.cfg.flushSize == 0 || buffer.Size() < q.cfg.flushSize
+
+		sizeLimitReached = func() bool {
+			return !(q.cfg.flushSize == 0 || buffer.Size() < q.cfg.flushSize)
 		}
-		for canPushMore() {
-			select {
-			case item := <-q.push:
-				buffer.Push(item)
-			default:
-				return
+
+		pushesLimitReached = func() bool {
+			return !(q.cfg.flushPushes == 0 || buffer.Pushes() < q.cfg.flushPushes)
+		}
+
+		collect = func() {
+			for {
+				if sizeLimitReached() || pushesLimitReached() {
+					return
+				}
+				select {
+				case item := <-q.push:
+					buffer.Push(item)
+				default:
+					return
+				}
 			}
 		}
-	}
+	)
 	for {
 		var flushCh chan flushResult
 		select {
@@ -344,10 +358,13 @@ func (q *Queue[Item]) pushWorker() error {
 
 		case item := <-q.push:
 			buffer.Push(item)
-			if q.cfg.flushSize == 0 || buffer.Size() < q.cfg.flushSize {
+			if sizeLimitReached() {
+				q.cfg.metrics.itemsFlushed.WithLabelValues("size").Add(float64(buffer.Size()))
+			} else if pushesLimitReached() {
+				q.cfg.metrics.itemsFlushed.WithLabelValues("pushes").Add(float64(buffer.Size()))
+			} else {
 				continue
 			}
-			q.cfg.metrics.itemsFlushed.WithLabelValues("size").Add(float64(buffer.Size()))
 		}
 
 		data, err := codec.Encode(buffer.Iter())

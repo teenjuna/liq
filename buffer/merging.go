@@ -7,6 +7,7 @@ import (
 
 type MergingBuffer[Item any, Key comparable] struct {
 	items     map[Key]Item
+	pushes    int
 	keyFunc   func(Item) Key
 	mergeFunc func(Item, Item) Item
 }
@@ -17,12 +18,14 @@ func Merging[Item any, Key comparable](
 ) *MergingBuffer[Item, Key] {
 	return &MergingBuffer[Item, Key]{
 		items:     make(map[Key]Item, 0),
+		pushes:    0,
 		keyFunc:   keyFunc,
 		mergeFunc: mergeFunc,
 	}
 }
 
 func (b *MergingBuffer[Item, Key]) Push(item Item) {
+	b.pushes += 1
 	key := b.keyFunc(item)
 	if existingItem, ok := b.items[key]; ok {
 		newItem := b.mergeFunc(existingItem, item)
@@ -36,11 +39,16 @@ func (b *MergingBuffer[Item, Key]) Size() int {
 	return len(b.items)
 }
 
+func (b *MergingBuffer[Item, Key]) Pushes() int {
+	return b.pushes
+}
+
 func (b *MergingBuffer[Item, Key]) Iter() iter.Seq[Item] {
 	return maps.Values(b.items)
 }
 
 func (b *MergingBuffer[Item, Key]) Reset() {
+	b.pushes = 0
 	clear(b.items)
 }
 

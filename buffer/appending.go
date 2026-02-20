@@ -23,6 +23,10 @@ func (b *AppendingBuffer[Item]) Size() int {
 	return len(b.items)
 }
 
+func (b *AppendingBuffer[Item]) Pushes() int {
+	return len(b.items)
+}
+
 func (b *AppendingBuffer[Item]) Iter() iter.Seq[Item] {
 	return slices.Values(b.items)
 }

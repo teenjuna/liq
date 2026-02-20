@@ -48,6 +48,37 @@ func TestQueueFlushBySize(t *testing.T) {
 			},
 			func(c *liq.Config[Item]) {
 				c.FlushSize(len(Data))
+				c.FlushPushes(0)
+				c.FlushTimeout(0)
+			},
+		)
+		require.Nil(t, err)
+		deferClose(t, queue)
+
+		for _, item := range Data {
+			require.Nil(t, queue.Push(t.Context(), item))
+		}
+
+		synctest.Wait()
+		expect(t, processed)
+	})
+}
+
+func TestQueueFlushByPushes(t *testing.T) {
+	run(t, func(t *testing.T) {
+		processed := make(chan struct{})
+
+		queue, err := liq.New(
+			func(ctx context.Context, queue *liq.Queue[Item], batch iter.Seq[Item]) error {
+				items := slices.Collect(batch)
+				require.Equal(t, items, Data)
+				processed <- struct{}{}
+				return nil
+			},
+			func(c *liq.Config[Item]) {
+				c.FlushSize(0)
+				c.FlushPushes(len(Data))
+				c.FlushTimeout(0)
 			},
 		)
 		require.Nil(t, err)
@@ -76,6 +107,7 @@ func TestQueueFlushByTimeout(t *testing.T) {
 			},
 			func(c *liq.Config[Item]) {
 				c.FlushSize(0)
+				c.FlushPushes(0)
 				c.FlushTimeout(timeout)
 			},
 		)

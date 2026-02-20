@@ -20,6 +20,7 @@ type Config[Item any] struct {
 	buffer               buffer.Buffer[Item]
 	retryPolicy          retry.Policy
 	flushSize            int
+	flushPushes          int
 	flushTimeout         time.Duration
 	workers              int
 	batches              int
@@ -44,12 +45,28 @@ func (c *Config[Item]) File(file *FileConfig) {
 
 // FlushSize sets the size of the buffer after which it will be automatically flushed.
 //
+// It can be different from the [Config.FlushPushes] if the buffer performs some kind of
+// aggregation, like [buffer.Merging].
+//
 // Panics if size < 0.
 func (c *Config[Item]) FlushSize(size int) {
 	if size < 0 {
 		panic("flush size can't be < 0")
 	}
 	c.flushSize = size
+}
+
+// FlushPushes sets the number of pushes to buffer after which it will be automatically flushed.
+//
+// It can be different from the [Config.FlushSize] if the buffer performs some kind of aggregation,
+// like [buffer.Merging].
+//
+// Panics if pushes < 0.
+func (c *Config[Item]) FlushPushes(pushes int) {
+	if pushes < 0 {
+		panic("flush pushes can't be < 0")
+	}
+	c.flushPushes = pushes
 }
 
 // FlushTimeout sets the amount of time after which the buffer will be automatically flushed. Zero

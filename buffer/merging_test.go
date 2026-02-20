@@ -46,6 +46,7 @@ func TestMergingBuffer(t *testing.T) {
 	for i, item := range input {
 		buffer.Push(item)
 		require.Equal(t, buffer.Size(), i+1)
+		require.Equal(t, buffer.Pushes(), i+1)
 	}
 
 	items := slices.SortedFunc(buffer.Iter(), cmp)
@@ -54,9 +55,10 @@ func TestMergingBuffer(t *testing.T) {
 	require.Equal(t, items, input)
 
 	var doubledInputs []Item
-	for _, item := range input {
+	for i, item := range input {
 		buffer.Push(item)
 		require.Equal(t, buffer.Size(), len(input))
+		require.Equal(t, buffer.Pushes(), len(input)+i+1)
 		doubledInputs = append(doubledInputs, Item{
 			ID: item.ID,
 			N1: item.N1 * 2,
@@ -66,16 +68,19 @@ func TestMergingBuffer(t *testing.T) {
 
 	items = slices.SortedFunc(buffer.Iter(), cmp)
 	require.Equal(t, len(items), buffer.Size())
+	require.Equal(t, len(items)*2, buffer.Pushes())
 	require.Equal(t, len(items), len(input))
 	require.Equal(t, items, doubledInputs)
 
 	derived := buffer.Derive()
 	require.Equal(t, derived.Size(), 0)
 	require.Equal(t, buffer.Size(), len(input))
+	require.Equal(t, buffer.Pushes(), len(input)*2)
 
 	buffer.Reset()
 
 	items = slices.Collect(buffer.Iter())
 	require.Equal(t, buffer.Size(), 0)
+	require.Equal(t, buffer.Pushes(), 0)
 	require.Equal(t, len(items), 0)
 }

@@ -10,6 +10,9 @@ type Buffer[Item any] interface {
 	Push(item Item)
 	// Size returns the number of items in the buffer.
 	Size() int
+	// Pushed returns the number of pushes made to buffer, which can be different if the buffer
+	// performs some kind of aggregation on pushes.
+	Pushes() int
 	// Iter returns a sequence of all items in the buffer.
 	Iter() iter.Seq[Item]
 	// Reset clears all items from the buffer.
