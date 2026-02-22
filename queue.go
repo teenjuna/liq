@@ -156,7 +156,7 @@ func New[Item any](
 	}
 
 	var (
-		push    = make(chan Item, cfg.flushSize)
+		push    = make(chan Item, max(cfg.flushSize, cfg.flushPushes))
 		flush   = make(chan chan flushResult)
 		flushed = make(chan struct{}, cfg.workers)
 		closing = new(atomic.Bool)
@@ -480,6 +480,18 @@ func (q *Queue[Item]) processWorker() error {
 				err = fmt.Errorf("release batches: %w", err)
 				return err
 			}
+		}
+
+		// During bursts of flushes, the following can happen: the flush channel is already full
+		// while the worker is still processing data. A flush notification may be dropped.
+		// The worker processes all available notifications and then stops. If there is a pause
+		// in new notifications, it will not attempt to claim the remaining batches - even though
+		// batches whose notifications were dropped are still in the queue.
+		//
+		// To prevent this, after each successful claim the worker schedules another attempt to
+		// claim batches by sending a fake notification. Once no batches remain, it resumes waiting
+		// for real notifications.
+		if len(q.flushed) == 0 {
 			notify(q.flushed, struct{}{})
 		}
 

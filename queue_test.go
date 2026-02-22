@@ -8,6 +8,7 @@ import (
 	"path"
 	"slices"
 	"strconv"
+	"sync/atomic"
 	"testing"
 	"testing/synctest"
 	"time"
@@ -171,6 +172,35 @@ func TestQueueManualFlush(t *testing.T) {
 		synctest.Wait()
 
 		expect(t, processed)
+	})
+}
+
+func TestQueueNoMisses(t *testing.T) {
+	run(t, func(t *testing.T) {
+		processed := new(atomic.Int32)
+		queue, err := liq.New(
+			func(ctx context.Context, queue *liq.Queue[Item], batch iter.Seq[Item]) error {
+				items := slices.Collect(batch)
+				require.Equal(t, len(items), 1)
+				processed.Add(1)
+				return nil
+			},
+			func(c *liq.Config[Item]) {
+				c.FlushSize(1)
+				c.FlushPushes(0)
+				c.FlushTimeout(0)
+			},
+		)
+		require.Nil(t, err)
+		deferClose(t, queue)
+
+		for _, item := range Data {
+			require.Nil(t, queue.Push(t.Context(), item))
+		}
+
+		synctest.Wait()
+
+		require.Equal(t, int(processed.Load()), len(Data))
 	})
 }
 
