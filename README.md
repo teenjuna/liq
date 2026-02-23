@@ -1,3 +1,5 @@
+[![Go Reference](https://pkg.go.dev/badge/github.com/teenjuna/liq.svg)](https://pkg.go.dev/github.com/teenjuna/liq)
+
 liq is a Go library that implements a generic, buffered, batched, and persistent queue.
 
 Most of the queue's behavior is configurable:
